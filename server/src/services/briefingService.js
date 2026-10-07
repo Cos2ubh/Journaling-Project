@@ -81,6 +81,12 @@ async function buildBriefing(user, date) {
 
 // ---------- view model (what the client sees) ----------
 
+/** Rounded mean of the numeric arguments, or null if there are none. */
+function average(...values) {
+  const nums = values.filter((n) => typeof n === 'number');
+  return nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null;
+}
+
 function storyView(article) {
   const meta = article.filteringMetadata || {};
   return {
@@ -92,6 +98,12 @@ function storyView(article) {
     publishedAt: article.publishedAt,
     score: meta.overallScore ?? null,
     sourceScore: meta.credibility?.overallScore ?? null,
+    // The three signals behind the score (shown in "How this was scored")
+    signals: {
+      source: meta.credibility?.overallScore ?? null,
+      language: meta.keywordFilter?.score ?? null,
+      aiReview: average(meta.aiAnalysis?.qualityScore, meta.aiAnalysis?.credibilityScore)
+    },
     summary: article.enrichment?.summary || fallbackSummary(article),
     topics: (article.categories || []).filter((c) => c && c.slug).map((c) => ({ slug: c.slug, name: c.name }))
   };

@@ -10,8 +10,61 @@ import QuickCheck from './QuickCheck';
 import { formatDayKey } from './format';
 import '../../styles/AppShell.css';
 import '../../styles/Today.css';
+import '../../styles/TodayMotion.css';
 
 const EXPERIMENT = 'briefing-credibility-display';
+
+/** Rough reading time: summaries at ~220 wpm plus ~20 seconds per quiz question. */
+function readingMinutes(briefing) {
+  const words = briefing.stories.reduce((n, s) => n + `${s.title} ${s.summary}`.split(/\s+/).length, 0);
+  const seconds = (words / 220) * 60 + briefing.quiz.total * 20;
+  return Math.max(1, Math.round(seconds / 60));
+}
+
+/** Thin line under the header showing how far down the briefing you are. */
+const ReadingProgress = () => {
+  const barRef = useRef(null);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const doc = document.documentElement;
+      const max = doc.scrollHeight - window.innerHeight;
+      const p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+      if (barRef.current) barRef.current.style.transform = `scaleX(${p})`;
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+  return <div className="vd-progress" aria-hidden="true"><div ref={barRef} className="vd-progress-bar" /></div>;
+};
+
+/** Placeholder in the shape of the briefing while it loads. */
+const BriefingSkeleton = () => (
+  <div className="vd-skeleton" role="status" aria-label="Loading today's briefing">
+    <div className="vd-sk vd-sk-date" />
+    <div className="vd-sk vd-sk-line" style={{ width: '58%' }} />
+    <p className="vd-skeleton-note">Picking today's most credible stories and summarising them. The first briefing of the day takes a few seconds.</p>
+    {[0, 1, 2].map((i) => (
+      <div key={i} className="vd-sk-story">
+        <div className="vd-sk vd-sk-meta" />
+        <div className="vd-sk vd-sk-title" />
+        <div className="vd-sk vd-sk-title" style={{ width: '64%' }} />
+        <div className="vd-sk vd-sk-line" />
+        <div className="vd-sk vd-sk-line" />
+        <div className="vd-sk vd-sk-line" style={{ width: '72%' }} />
+        <div className="vd-sk vd-sk-meter" />
+      </div>
+    ))}
+  </div>
+);
 
 const Today = () => {
   const { refreshUser } = useAuth();
@@ -68,14 +121,9 @@ const Today = () => {
   return (
     <>
       <AppHeader />
+      {status === 'ready' && briefing?.stories.length > 0 && <ReadingProgress />}
       <main className="vd-page vd-today">
-        {status === 'loading' && (
-          <div className="vd-state" role="status">
-            <h2>Putting together today's briefing</h2>
-            <p>Picking the most credible stories and summarising them. The first briefing of the day can take a few seconds.</p>
-            <div className="vd-loading-bar" aria-hidden="true" />
-          </div>
-        )}
+        {status === 'loading' && <BriefingSkeleton />}
 
         {status === 'error' && (
           <div className="vd-state" role="alert">
@@ -89,11 +137,19 @@ const Today = () => {
           <>
             <header className="vd-masthead">
               <h1 className="vd-masthead-date">{formatDayKey(briefing.date)}</h1>
-              <p className="vd-masthead-sub">
-                {briefing.stories.length > 0
-                  ? `Your ${briefing.stories.length} most credible stories today${briefing.quiz.total > 0 ? `, then a ${briefing.quiz.total}-question check` : ''}.`
-                  : 'Your briefing'}
-              </p>
+              <div className="vd-masthead-sub">
+                {briefing.stories.length > 0 ? (
+                  <>
+                    <p>
+                      Your {briefing.stories.length} most credible stories today
+                      {briefing.quiz.total > 0 ? `, then a ${briefing.quiz.total}-question check` : ''}.
+                    </p>
+                    <p className="vd-masthead-time">About {readingMinutes(briefing)} min</p>
+                  </>
+                ) : (
+                  <p>Your briefing</p>
+                )}
+              </div>
             </header>
 
             {briefing.stories.length === 0 ? (

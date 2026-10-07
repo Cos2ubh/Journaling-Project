@@ -2,9 +2,32 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import briefingService from '../../services/briefingService';
 import { track } from '../../services/analytics';
+import { useCountUp } from '../../hooks/useMotion';
 import ActivityStrip from './ActivityStrip';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
+
+const CheckMark = () => (
+  <svg className="vd-mark" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <path className="vd-mark-path" d="M3.5 8.5 6.5 11.5 12.5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const CrossMark = () => (
+  <svg className="vd-mark" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <path className="vd-mark-path" d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+/** One segment per question: empty, current, right or wrong. */
+const Progress = ({ questions, current }) => (
+  <ol className="vd-qprogress" aria-hidden="true">
+    {questions.map((q, i) => {
+      const state = q.answered ? (q.correct ? 'right' : 'wrong') : i === current ? 'current' : '';
+      return <li key={q.index} className={state} />;
+    })}
+  </ol>
+);
 
 /**
  * The 3-question check at the end of the briefing.
@@ -23,6 +46,7 @@ const QuickCheck = ({ quiz, streak, onQuizUpdate, onStreakChange }) => {
   const [error, setError] = useState('');
   const [finishing, setFinishing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [justFinished, setJustFinished] = useState(false);
 
   // ---- No quiz today (AI unavailable): reading counts ----
   if (quiz.total === 0) {
@@ -33,6 +57,7 @@ const QuickCheck = ({ quiz, streak, onQuizUpdate, onStreakChange }) => {
         onQuizUpdate({ ...quiz, completed: true });
         onStreakChange(result.streak);
         track('briefing_finished_without_quiz', { streak: result.streak?.current });
+        setJustFinished(true);
         setRefreshKey((k) => k + 1);
       } catch {
         setError("Couldn't save. Try again.");
@@ -44,7 +69,7 @@ const QuickCheck = ({ quiz, streak, onQuizUpdate, onStreakChange }) => {
       <section className="vd-check-section" aria-labelledby="qc-title">
         <h2 id="qc-title" className="vd-section-title">Done reading?</h2>
         {quiz.completed ? (
-          <Completion quiz={quiz} streak={streak} refreshKey={refreshKey} />
+          <Completion quiz={quiz} streak={streak} refreshKey={refreshKey} celebrate={justFinished} />
         ) : (
           <>
             <p className="vd-check-lead">There's no quick check today. Mark the briefing as read to keep your streak.</p>
@@ -64,7 +89,7 @@ const QuickCheck = ({ quiz, streak, onQuizUpdate, onStreakChange }) => {
     return (
       <section className="vd-check-section" aria-labelledby="qc-title">
         <h2 id="qc-title" className="vd-section-title">Quick check</h2>
-        <Completion quiz={quiz} streak={streak} refreshKey={refreshKey} />
+        <Completion quiz={quiz} streak={streak} refreshKey={refreshKey} celebrate={justFinished} />
       </section>
     );
   }
@@ -82,14 +107,14 @@ const QuickCheck = ({ quiz, streak, onQuizUpdate, onStreakChange }) => {
       const questions = quiz.questions.map((q) => (q.index === result.index
         ? { ...q, answered: true, choice: result.choice, correct: result.correct, correctIndex: result.correctIndex, explanation: result.explanation }
         : q));
-      const next = { ...quiz, questions, completed: result.completed, correctCount: result.correctCount };
-      onQuizUpdate(next);
+      onQuizUpdate({ ...quiz, questions, completed: result.completed, correctCount: result.correctCount });
       track('quiz_answered', { index: result.index, correct: result.correct });
 
       if (result.completed) {
         onStreakChange(result.streak);
         track('quiz_completed', { correct_count: result.correctCount, total: result.total, streak: result.streak?.current });
         if (result.streak?.extended) track('streak_extended', { streak: result.streak.current });
+        setJustFinished(true);
         setRefreshKey((k) => k + 1);
       }
     } catch (err) {
@@ -117,32 +142,41 @@ const QuickCheck = ({ quiz, streak, onQuizUpdate, onStreakChange }) => {
         <h2 id="qc-title" className="vd-section-title">Quick check</h2>
         <p className="vd-check-progress">Question {current + 1} of {quiz.total}</p>
       </div>
+      <Progress questions={quiz.questions} current={current} />
 
-      <p className="vd-question">{question.text}</p>
+      {/* key forces a fresh entrance when the question changes */}
+      <div className="vd-question-block" key={question.index}>
+        <p className="vd-question">{question.text}</p>
 
-      <div className="vd-options" role="radiogroup" aria-label="Answer options">
-        {question.options.map((option, i) => (
-          <button
-            key={i}
-            type="button"
-            role="radio"
-            aria-checked={answered ? question.choice === i : selected === i}
-            className={`vd-option ${optionClass(i)}`}
-            onClick={() => !answered && setSelected(i)}
-            disabled={answered || submitting}
-          >
-            <span className="vd-option-letter" aria-hidden="true">{LETTERS[i]}</span>
-            <span>{option}</span>
-          </button>
-        ))}
-      </div>
-
-      {answered && (
-        <div className={`vd-feedback ${question.correct ? 'correct' : 'wrong'}`} role="status">
-          <p className="vd-feedback-verdict">{question.correct ? 'Correct.' : `Not quite. The answer is ${LETTERS[question.correctIndex]}.`}</p>
-          {question.explanation && <p className="vd-feedback-why">{question.explanation}</p>}
+        <div className="vd-options" role="radiogroup" aria-label="Answer options">
+          {question.options.map((option, i) => {
+            const state = optionClass(i);
+            return (
+              <button
+                key={i}
+                type="button"
+                role="radio"
+                aria-checked={answered ? question.choice === i : selected === i}
+                className={`vd-option ${state}`}
+                onClick={() => !answered && setSelected(i)}
+                disabled={answered || submitting}
+              >
+                <span className="vd-option-letter" aria-hidden="true">
+                  {state === 'correct' ? <CheckMark /> : state === 'wrong' ? <CrossMark /> : LETTERS[i]}
+                </span>
+                <span>{option}</span>
+              </button>
+            );
+          })}
         </div>
-      )}
+
+        {answered && (
+          <div className={`vd-feedback ${question.correct ? 'correct' : 'wrong'}`} role="status">
+            <p className="vd-feedback-verdict">{question.correct ? 'Correct.' : `Not quite. The answer is ${LETTERS[question.correctIndex]}.`}</p>
+            {question.explanation && <p className="vd-feedback-why">{question.explanation}</p>}
+          </div>
+        )}
+      </div>
 
       {error && <p className="vd-form-error" role="alert">{error}</p>}
 
@@ -161,22 +195,32 @@ const QuickCheck = ({ quiz, streak, onQuizUpdate, onStreakChange }) => {
   );
 };
 
-const Completion = ({ quiz, streak, refreshKey }) => (
-  <div className="vd-done">
-    {quiz.total > 0 && (
-      <p className="vd-done-score">
-        You got <strong>{quiz.correctCount} of {quiz.total}</strong> right.
-      </p>
-    )}
-    <p className="vd-done-streak">
-      {streak?.current > 0
-        ? `That's a ${streak.current}-day streak.${streak.longest > streak.current ? ` Your best is ${streak.longest}.` : ''}`
-        : "Today's briefing is done."}
-      {' '}Your next briefing is ready tomorrow morning.
-    </p>
-    <ActivityStrip refreshKey={refreshKey} />
-    <Link to="/dashboard" className="vd-btn vd-btn-secondary">Explore more news</Link>
-  </div>
-);
+/** Results: score and streak count up once, right after finishing. */
+const Completion = ({ quiz, streak, refreshKey, celebrate }) => {
+  const correct = useCountUp(quiz.correctCount || 0, { start: true, duration: celebrate ? 700 : 0 });
+  const days = useCountUp(streak?.current || 0, { start: true, duration: celebrate ? 900 : 0, delay: celebrate ? 350 : 0 });
+
+  return (
+    <div className={`vd-done${celebrate ? ' celebrate' : ''}`}>
+      {quiz.total > 0 && (
+        <p className="vd-done-score">
+          You got <strong>{correct} of {quiz.total}</strong> right.
+        </p>
+      )}
+      {streak?.current > 0 ? (
+        <div className="vd-done-streak">
+          <span className="vd-streak-number">{days}</span>
+          <span className="vd-streak-copy">
+            day streak{streak.longest > streak.current ? `. Your best is ${streak.longest}` : ''}. Your next briefing is ready tomorrow morning.
+          </span>
+        </div>
+      ) : (
+        <p className="vd-done-note">Today's briefing is done. Your next one is ready tomorrow morning.</p>
+      )}
+      <ActivityStrip refreshKey={refreshKey} celebrate={celebrate} />
+      <Link to="/dashboard" className="vd-btn vd-btn-secondary">Explore more news</Link>
+    </div>
+  );
+};
 
 export default QuickCheck;

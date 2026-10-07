@@ -50,7 +50,13 @@ const TopicPicker = ({ selected, onChange, onLimitReached, limit = FREE_TOPIC_LI
             onClick={() => toggle(topic.slug)}
             style={{ '--topic-color': topic.color || 'var(--accent-primary)' }}
           >
-            <span className="vd-topic-dot" aria-hidden="true" />
+            {on ? (
+              <svg className="vd-topic-check" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                <path d="M3 7.5 5.75 10.25 11 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <span className="vd-topic-dot" aria-hidden="true" />
+            )}
             {topic.name}
           </button>
         );

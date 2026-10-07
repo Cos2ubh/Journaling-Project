@@ -2,8 +2,10 @@ import React, { useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { track } from '../../services/analytics';
+import ScoreDemo from './ScoreDemo';
 import '../../styles/AppShell.css';
 import '../../styles/Today.css';
+import '../../styles/TodayMotion.css';
 import '../../styles/Landing.css';
 
 const Landing = () => {
@@ -37,23 +39,7 @@ const Landing = () => {
           </div>
         </section>
 
-        <aside className="vd-landing-sample" aria-label="Example story">
-          <p className="vd-sample-tag">Example story</p>
-          <p className="vd-story-meta"><span className="vd-story-source">Example Times</span><span>2 hours ago</span></p>
-          <h2 className="vd-story-title">City council approves three new bus routes after public consultation</h2>
-          <p className="vd-story-summary">
-            The council voted 9 to 2 to add routes linking the east side to the central station,
-            after 4,000 residents responded to a survey. Service starts in March.
-          </p>
-          <div className="vd-cred band-excellent">
-            <div className="vd-cred-row">
-              <span className="vd-cred-label">Highly credible</span>
-              <span className="vd-cred-score">86/100</span>
-            </div>
-            <div className="vd-cred-track" aria-hidden="true"><div className="vd-cred-fill" style={{ width: '86%' }} /></div>
-            <p className="vd-cred-note">Source reliability 91/100. Score combines source, language and AI review.</p>
-          </div>
-        </aside>
+        <ScoreDemo />
       </main>
 
       <section className="vd-landing-how" aria-labelledby="how-title">
