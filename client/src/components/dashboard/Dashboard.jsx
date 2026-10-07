@@ -6,12 +6,13 @@ import ArticleCard from './ArticleCard';
 import FilterSidebar from './FilterSidebar';
 import ViralNews from './ViralNews';
 import NewsVerifier from './NewsVerifier';
+import { FEATURES } from '../../config/features';
 import '../../styles/Dashboard.css';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isVerifierOpen, setIsVerifierOpen] = useState(false);
@@ -67,7 +68,7 @@ const Dashboard = () => {
     <div className="dashboard">
       <header className="dashboard-header">
         <div className="header-left">
-          <h1>Real News Filter</h1>
+          <h1>Veritas Daily</h1>
           {stats && (
             <div className="header-stats">
               <button
@@ -78,14 +79,17 @@ const Dashboard = () => {
                 <span className="stat-indicator approved"></span>
                 {stats.approvedArticles} approved
               </button>
-              <button
-                className={`stat-btn stat-pending ${filters.status === 'pending' ? 'active' : ''}`}
-                onClick={() => handleStatusFilter('pending')}
-                title="Click to filter pending articles"
-              >
-                <span className="stat-indicator pending"></span>
-                {stats.pendingArticles} pending
-              </button>
+              {/* The pending queue is internal - only admins review it */}
+              {user?.role === 'admin' && (
+                <button
+                  className={`stat-btn stat-pending ${filters.status === 'pending' ? 'active' : ''}`}
+                  onClick={() => handleStatusFilter('pending')}
+                  title="Click to filter pending articles"
+                >
+                  <span className="stat-indicator pending"></span>
+                  {stats.pendingArticles} pending
+                </button>
+              )}
               <span className="stat-average">
                 <span className="stat-indicator average"></span>
                 Avg: {stats.averageScore}
@@ -142,6 +146,7 @@ const Dashboard = () => {
                 <span>🛡️</span>
                 <span>Verify</span>
               </button>
+              {FEATURES.viral && (<>
               <button
                 className="feature-btn trending-btn"
                 title="View trending stories"
@@ -158,6 +163,7 @@ const Dashboard = () => {
                 <span className="btn-indicator alert-pulse"></span>
                 <span>Viral Fakes</span>
               </button>
+              </>)}
             </div>
           </div>
 
@@ -168,11 +174,13 @@ const Dashboard = () => {
           />
 
           {/* Viral News Modal */}
-          <ViralNews
-            isOpen={viralSection !== null}
-            onClose={() => setViralSection(null)}
-            initialSection={viralSection || 'trending'}
-          />
+          {FEATURES.viral && (
+            <ViralNews
+              isOpen={viralSection !== null}
+              onClose={() => setViralSection(null)}
+              initialSection={viralSection || 'trending'}
+            />
+          )}
 
           <div className="feed-header">
             <h2>

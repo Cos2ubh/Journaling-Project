@@ -200,8 +200,6 @@ const ArticleSchema = new mongoose.Schema({
 
 // Indexes for common queries
 ArticleSchema.index({ publishedAt: -1 });
-ArticleSchema.index({ 'source.name': 1 });
-ArticleSchema.index({ 'curation.status': 1 });
 ArticleSchema.index({ 'filteringMetadata.overallScore': -1 });
 ArticleSchema.index({ categories: 1 });
 ArticleSchema.index({ title: 'text', description: 'text' });

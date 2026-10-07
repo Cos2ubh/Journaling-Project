@@ -1,6 +1,6 @@
-# News Filtering Website 📰
+# Veritas Daily 📰
 
-A modern, AI-powered news aggregation and filtering platform that helps you discover credible news while filtering out misinformation.
+Credibility-scored news. Veritas Daily collects stories from trusted sources, scores each one for credibility with a multi-layer AI pipeline, and helps you check any story before you trust it.
 
 ![PS5-Inspired Dark Theme](https://img.shields.io/badge/Theme-PS5%20Inspired-0070D1?style=for-the-badge)
 ![Auto Updates](https://img.shields.io/badge/Updates-Automatic-00D26A?style=for-the-badge)

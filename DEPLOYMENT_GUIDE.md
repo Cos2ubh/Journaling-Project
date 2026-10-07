@@ -1,4 +1,4 @@
-# Deployment Guide - News Filtering Website
+# Deployment Guide - Veritas Daily
 
 ## Overview
 This guide will help you deploy your news filtering website online with automatic updates.
@@ -92,7 +92,7 @@ mongodb+srv://username:<password>@cluster0.xxxxx.mongodb.net/news-filter?retryWr
 ### 3.1 Push Code to GitHub
 ```bash
 # Navigate to project root
-cd "A:\Downloads\CLAUDE Projects\Journaling Project"
+cd path\to\your\project
 
 # Initialize git (if not already done)
 git init

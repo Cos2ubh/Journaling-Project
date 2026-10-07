@@ -4,33 +4,50 @@ const logger = require('../utils/logger');
 let redis = null;
 
 const connectRedis = async () => {
-  try {
-    redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
-      lazyConnect: true
-    });
+  if (!process.env.REDIS_HOST) {
+    logger.info('Redis not configured (REDIS_HOST empty) - caching disabled');
+    return null;
+  }
 
-    redis.on('connect', () => {
-      logger.info('Redis connected');
-    });
+  let connectedOnce = false;
+  let warned = false;
 
-    redis.on('error', (err) => {
+  const client = new Redis({
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT || 6379,
+    password: process.env.REDIS_PASSWORD || undefined,
+    maxRetriesPerRequest: 3,
+    lazyConnect: true,
+    // Before the first successful connection: give up after 3 tries, so a missing
+    // Redis doesn't retry (and log) forever. After that: keep reconnecting.
+    retryStrategy: (times) => {
+      if (!connectedOnce) return times > 3 ? null : times * 200;
+      return Math.min(times * 200, 5000);
+    }
+  });
+
+  client.on('ready', () => {
+    connectedOnce = true;
+    warned = false;
+    logger.info('Redis connected');
+  });
+
+  // Log the first error of an outage once, not on every retry
+  client.on('error', (err) => {
+    if (!warned) {
       logger.warn('Redis connection error (caching disabled):', err.message);
-    });
+      warned = true;
+    }
+  });
 
-    await redis.connect();
-
-    // Test connection
-    await redis.ping();
-    logger.info('Redis connection verified');
-
+  try {
+    await client.connect();
+    await client.ping();
+    redis = client;
     return redis;
   } catch (error) {
     logger.warn('Redis not available - caching disabled:', error.message);
+    client.disconnect();
     redis = null;
     return null;
   }

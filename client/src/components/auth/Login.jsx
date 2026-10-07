@@ -40,7 +40,7 @@ const Login = () => {
     <div className="auth-container">
       <div className="auth-card">
         <h2>Login</h2>
-        <p className="auth-subtitle">Welcome back to Real News Filter</p>
+        <p className="auth-subtitle">Welcome back to Veritas Daily</p>
 
         {error && <div className="error-message">{error}</div>}
 

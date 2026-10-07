@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   getTrendingViral,
   getFakeNews,
-  getVerifiedNews,
-  getUnverifiedNews,
   getViralStats
 } from '../services/viralService';
 

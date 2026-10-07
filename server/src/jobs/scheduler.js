@@ -74,7 +74,8 @@ function initializeJobs() {
   });
 
   // Job: Viral news detection and verification (every 2 hours)
-  activeJobs.viralDetection = cron.schedule('15 */2 * * *', async () => {
+  // Off by default: the feature is hidden in the UI and each run spends API quota.
+  if (process.env.ENABLE_VIRAL_DETECTION === 'true') activeJobs.viralDetection = cron.schedule('15 */2 * * *', async () => {
     logger.info('[CRON] Starting viral news detection...');
     try {
       // Detect new viral stories
@@ -106,7 +107,7 @@ function initializeJobs() {
   logger.info('Scheduled jobs initialized:');
   logger.info('  - News fetch (US/Intl): Every hour at :00 UTC');
   logger.info('  - News fetch (India): Every hour at :30 IST');
-  logger.info('  - Viral detection: Every 2 hours at :15');
+  logger.info(`  - Viral detection: ${activeJobs.viralDetection ? 'Every 2 hours at :15' : 'disabled (set ENABLE_VIRAL_DETECTION=true)'}`);
   logger.info('  - Cleanup: Daily at 00:00 UTC');
 }
 
@@ -125,8 +126,15 @@ async function runInitialSetup() {
     await initializeDefaultSources();
     logger.info('Default source ratings initialized');
 
+    // Skip the startup fetch if we already fetched in the last hour.
+    // Without this, every nodemon restart spends NewsAPI quota.
+    const newest = await Article.findOne().sort({ createdAt: -1 }).select('createdAt').lean();
+    const minutesSinceLastFetch = newest ? (Date.now() - new Date(newest.createdAt).getTime()) / 60000 : Infinity;
+
     // Fetch initial news (if API key is configured)
-    if (process.env.NEWSAPI_KEY) {
+    if (process.env.NEWSAPI_KEY && minutesSinceLastFetch < 60) {
+      logger.info(`Skipping initial fetch: news was fetched ${Math.round(minutesSinceLastFetch)} min ago`);
+    } else if (process.env.NEWSAPI_KEY) {
       logger.info('Fetching initial news batch...');
       const results = await fetchAndStoreNews({ category: 'general' });
       logger.info(`Initial fetch complete: ${results.stored} articles stored`);

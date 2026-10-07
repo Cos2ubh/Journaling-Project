@@ -220,14 +220,14 @@ const forgotPassword = async (req, res) => {
           This link expires in 15 minutes. If you didn't request this, ignore this email.
         </p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-        <p style="color: #aaa; font-size: 0.8em;">Real News Filter</p>
+        <p style="color: #aaa; font-size: 0.8em;">Veritas Daily</p>
       </div>
     `;
 
     try {
       await sendEmail({
         to: user.email,
-        subject: 'Password Reset - Real News Filter',
+        subject: 'Password Reset - Veritas Daily',
         html
       });
 

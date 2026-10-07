@@ -4,6 +4,11 @@ const logger = require('../utils/logger');
 let esClient = null;
 
 const connectElasticsearch = async () => {
+  if (!process.env.ELASTICSEARCH_URL) {
+    logger.info('Elasticsearch not configured (ELASTICSEARCH_URL empty) - using MongoDB text search');
+    return null;
+  }
+
   try {
     esClient = new Client({
       node: process.env.ELASTICSEARCH_URL || 'http://localhost:9200',
