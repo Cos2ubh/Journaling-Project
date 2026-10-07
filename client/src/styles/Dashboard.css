@@ -11,8 +11,8 @@
 /* ---- Header / Navbar ---- */
 .dashboard-header {
   position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
+  top: 60px; /* sits below the shared app header */
+  z-index: calc(var(--z-sticky) - 1);
   background: rgba(0, 0, 0, 0.9);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);

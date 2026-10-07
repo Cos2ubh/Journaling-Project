@@ -2,13 +2,16 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-const ProtectedRoute = ({ children, requireAdmin = false }) => {
+/**
+ * requireOnboarded: send users who haven't picked topics yet to onboarding first.
+ */
+const ProtectedRoute = ({ children, requireAdmin = false, requireOnboarded = false }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
       <div className="loading-container">
-        <p>Loading...</p>
+        <p>Loading…</p>
       </div>
     );
   }
@@ -17,8 +20,12 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     return <Navigate to="/login" replace />;
   }
 
+  if (requireOnboarded && !user.onboarded) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   if (requireAdmin && user.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/today" replace />;
   }
 
   return children;

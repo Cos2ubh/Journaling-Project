@@ -24,6 +24,26 @@ function truncateWords(text, maxWords) {
   return words.slice(0, maxWords).join(' ').replace(/[,;:]$/, '') + '…';
 }
 
+/**
+ * Keep whole sentences up to maxWords. Falls back to a word cut only when the
+ * first sentence alone is too long, so summaries don't end mid-thought.
+ */
+function trimToSentences(text, maxWords) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  // Split only where punctuation is followed by whitespace and a new sentence start,
+  // so decimals ($4.1 billion) and mid-sentence abbreviations stay intact.
+  const sentences = clean.split(/(?<=[.!?]["'\u201D\u2019)]*)\s+(?=["'\u201C\u2018(]?[A-Z0-9])/);
+  const kept = [];
+  let words = 0;
+  for (const sentence of sentences) {
+    const n = sentence.trim().split(' ').filter(Boolean).length;
+    if (words + n > maxWords) break;
+    kept.push(sentence.trim());
+    words += n;
+  }
+  return kept.length > 0 ? kept.join(' ') : truncateWords(clean, maxWords);
+}
+
 /** Summary used when AI is unavailable: the article's own description, trimmed. */
 function fallbackSummary(article) {
   const text = String(article.description || '').replace(/\s*\[\+\d+ chars\]\s*$/, '');
@@ -46,6 +66,10 @@ function validateQuestion(q) {
   if (new Set(options.map((o) => o.toLowerCase())).size !== 4) return null;
   if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) return null;
   if (explanation.length < 5) return null;
+
+  // Reject the classic tell: the right answer is much longer than every wrong one.
+  const longestWrong = Math.max(...options.filter((_, i) => i !== correctIndex).map((o) => o.length));
+  if (options[correctIndex].length > Math.max(longestWrong * 1.6, longestWrong + 25)) return null;
 
   return { text, options, correctIndex, explanation: explanation.slice(0, 300) };
 }
@@ -103,6 +127,7 @@ Write:
 2. "question": one multiple-choice question that checks whether a reader understood the key fact of the story.
    - Answerable from the article text alone.
    - Exactly 4 short options, one correct; the wrong options must be plausible but clearly wrong according to the article.
+   - Make all four options similar in length, detail and grammatical form. The correct option must not stand out by being the longest or most specific.
    - Avoid trivia like exact dates or minor numbers unless they are the point of the story.
    - If the text is too thin for a fair question, set "question" to null.
 
@@ -114,7 +139,7 @@ Return JSON:
 
   const result = await llm.completeJSON({ system: SYSTEM_PROMPT, prompt, maxTokens: 500, temperature: 0.3 });
 
-  const summary = truncateWords(result.summary, SUMMARY_MAX_WORDS + 10);
+  const summary = trimToSentences(result.summary, SUMMARY_MAX_WORDS + 20);
   if (summary.length < 20) throw new Error('Summary too short');
 
   const valid = validateQuestion(result.question);
@@ -176,5 +201,6 @@ module.exports = {
   shuffleQuestion,
   fallbackSummary,
   truncateWords,
+  trimToSentences,
   MAX_ATTEMPTS
 };

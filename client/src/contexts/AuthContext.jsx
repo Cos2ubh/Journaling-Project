@@ -1,23 +1,47 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import authService from '../services/authService';
+import meService from '../services/meService';
 import { track, identifyUser, resetAnalytics } from '../services/analytics';
 
 const AuthContext = createContext(null);
+
+const storeUser = (user) => {
+  if (user) localStorage.setItem('user', JSON.stringify(user));
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Check if user is logged in on mount
-    const storedUser = authService.getStoredUser();
-    if (storedUser) {
-      setUser(storedUser);
-      identifyUser(storedUser);
-    }
-    setLoading(false);
+  // Replace the current user (e.g. after saving preferences) and persist it.
+  const updateUser = useCallback((next) => {
+    setUser(next);
+    storeUser(next);
   }, []);
+
+  // Re-read the profile from the server. Users who logged in before the
+  // onboarding feature existed have a stored profile without `onboarded`.
+  const refreshUser = useCallback(async () => {
+    try {
+      const fresh = await meService.get();
+      updateUser(fresh);
+      return fresh;
+    } catch {
+      return null; // 401 is handled globally by the API client
+    }
+  }, [updateUser]);
+
+  useEffect(() => {
+    const storedUser = authService.getStoredUser();
+    if (!storedUser || !authService.isAuthenticated()) {
+      setLoading(false);
+      return;
+    }
+    setUser(storedUser);
+    identifyUser(storedUser);
+    refreshUser().finally(() => setLoading(false));
+  }, [refreshUser]);
 
   const register = async (name, email, password) => {
     try {
@@ -58,11 +82,12 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await authService.logout();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
       track('logged_out');
       resetAnalytics();
       setUser(null);
-    } catch (err) {
-      console.error('Logout error:', err);
     }
   };
 
@@ -73,6 +98,8 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
+    updateUser,
+    refreshUser,
     isAuthenticated: !!user
   };
 

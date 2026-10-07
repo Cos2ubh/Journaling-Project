@@ -67,6 +67,25 @@ const TASKS = {
     return counts;
   },
 
+  /** Re-run topic tagging on recent articles (no API cost). */
+  recategorize: async ({ days = 7 } = {}) => {
+    const Category = require('../models/Category');
+    const docs = await Article.find({ publishedAt: { $gte: new Date(Date.now() - Number(days) * 24 * 3600e3) } })
+      .select('title description categories');
+    let changed = 0;
+    let untagged = 0;
+    for (const doc of docs) {
+      const next = await Category.categorizeArticle(doc.title, doc.description);
+      if (next.length === 0) untagged++;
+      const before = (doc.categories || []).map(String).sort().join(',');
+      if (before !== next.map(String).sort().join(',')) {
+        await Article.updateOne({ _id: doc._id }, { $set: { categories: next } });
+        changed++;
+      }
+    }
+    return { checked: docs.length, changed, untagged };
+  },
+
   /** Detect and auto-verify viral stories (hidden feature). */
   viral: async () => {
     const { detectViralStories, verifyViralNews } = require('../services/factChecker');

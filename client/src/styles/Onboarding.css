@@ -1,0 +1,105 @@
+/* ================================================
+   Onboarding, topic picker, settings
+   ================================================ */
+
+.vd-onboarding {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: var(--space-2xl) var(--space-lg);
+}
+.vd-onboarding-inner { width: 100%; max-width: 600px; margin: 0 auto; }
+.vd-onboarding-brand {
+  font-family: var(--font-reading);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2xl);
+}
+.vd-onboarding-title {
+  font-family: var(--font-reading);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-md);
+}
+.vd-onboarding-lead {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  max-width: 48ch;
+  margin-bottom: var(--space-xl);
+}
+.vd-onboarding-cta { margin-top: var(--space-xl); width: 100%; min-height: 52px; font-size: 1rem; }
+
+/* ---------- Topic picker ---------- */
+.vd-topics { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.vd-topic {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font: 500 0.95rem var(--font-body);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+.vd-topic:hover { color: var(--text-primary); border-color: rgba(255, 255, 255, 0.2); }
+.vd-topic-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--topic-color);
+  opacity: 0.5;
+}
+.vd-topic.on {
+  color: var(--text-primary);
+  border-color: var(--topic-color);
+  background: color-mix(in srgb, var(--topic-color) 14%, var(--bg-card));
+}
+.vd-topic.on .vd-topic-dot { opacity: 1; }
+.vd-topic:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+.vd-topics-count { margin-top: var(--space-sm); color: var(--text-tertiary); font-size: 0.875rem; }
+.vd-topics-status { color: var(--text-secondary); }
+.vd-topics-status.error { color: var(--error); }
+
+/* ---------- Checkbox ---------- */
+.vd-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.vd-check input { width: 18px; height: 18px; accent-color: var(--accent-primary); }
+
+.vd-form-error { color: var(--error); margin-top: var(--space-md); }
+
+/* ---------- Settings ---------- */
+.vd-settings-title {
+  font-family: var(--font-reading);
+  font-size: 2rem;
+  font-weight: 500;
+  margin-bottom: var(--space-xl);
+}
+.vd-settings-section { padding: var(--space-lg) 0; border-top: 1px solid var(--border-color); }
+.vd-settings-section h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: var(--space-xs); }
+.vd-settings-help { color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: var(--space-md); }
+.vd-settings-section .vd-check { margin-top: var(--space-sm); }
+.vd-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-color);
+}
+.vd-saved { color: var(--success); font-size: 0.9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vd-topic { transition: none; }
+}

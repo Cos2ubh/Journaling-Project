@@ -7,10 +7,11 @@ import FilterSidebar from './FilterSidebar';
 import ViralNews from './ViralNews';
 import NewsVerifier from './NewsVerifier';
 import { FEATURES } from '../../config/features';
+import AppHeader from '../common/AppHeader';
 import '../../styles/Dashboard.css';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,10 +43,6 @@ const Dashboard = () => {
     }
   }, [searchParams]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -66,9 +63,10 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
+      <AppHeader />
       <header className="dashboard-header">
         <div className="header-left">
-          <h1>Veritas Daily</h1>
+          <h1>Explore</h1>
           {stats && (
             <div className="header-stats">
               <button
@@ -107,11 +105,7 @@ const Dashboard = () => {
             />
             <button type="submit">Search</button>
           </form>
-          <div className="user-info">
-            <span>{user?.name}</span>
-            {user?.role === 'admin' && <span className="admin-badge">Admin</span>}
-            <button onClick={handleLogout} className="btn-secondary">Logout</button>
-          </div>
+          {user?.role === 'admin' && <span className="admin-badge">Admin</span>}
         </div>
       </header>
 

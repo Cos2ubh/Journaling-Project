@@ -227,3 +227,56 @@ test('the enrichment prompt marks the article as untrusted data', async () => {
   assert.match(params.system, /untrusted/i);
   assert.match(params.messages[0].content, /<article>[\s\S]*<\/article>/);
 });
+
+// ---------------- quality fixes found in the real-content run ----------------
+
+const { matchCategories } = require('../src/utils/categorize');
+const { trimToSentences } = require('../src/services/enrichment');
+
+const CATS = [
+  { _id: 'technology', keywords: ['tech', 'software', 'AI', 'app', 'digital'] },
+  { _id: 'world', keywords: ['war', 'UN', 'treaty', 'country'] },
+  { _id: 'health', keywords: ['vaccine', 'hospital', 'FDA'] }
+];
+
+test('tagging matches whole words, not fragments inside other words', () => {
+  assert.deepEqual(matchCategories('Messi said he played against Benin and it happened in an award show', CATS), []);
+  assert.deepEqual(matchCategories('Under the new fund rules', CATS), [], '"UN" must not match "under"/"fund"');
+});
+
+test('tagging still finds real matches, acronyms and plurals', () => {
+  assert.deepEqual(matchCategories('New AI app launches', CATS), ['technology']);
+  assert.deepEqual(matchCategories('The UN warns of war', CATS), ['world']);
+  assert.deepEqual(matchCategories('Hospitals expand vaccines after FDA review', CATS), ['health']);
+  assert.deepEqual(matchCategories('Countries sign treaty', CATS), ['world']);
+});
+
+test('acronym keywords are case-sensitive', () => {
+  assert.deepEqual(matchCategories('the ai of it', CATS), []);
+});
+
+test('trimToSentences keeps whole sentences within the limit', () => {
+  const text = 'One two three four. Five six seven eight. Nine ten eleven twelve.';
+  assert.equal(trimToSentences(text, 8), 'One two three four. Five six seven eight.');
+  assert.equal(trimToSentences(text, 100), text);
+  assert.equal(trimToSentences('A very long single sentence without a stop', 3), 'A very long…');
+});
+
+test('a question whose right answer is far longer than the rest is rejected', () => {
+  const tell = {
+    text: 'Why did the attorneys ask for a different method?',
+    options: ['It was unconstitutional', 'More time for appeals', 'Claimed innocence', 'They cited a platelet disorder and small veins that would make the injection painful and ineffective'],
+    correctIndex: 3,
+    explanation: 'The article says so.'
+  };
+  assert.equal(validateQuestion(tell), null);
+  assert.ok(validateQuestion({ ...tell, options: ['Unconstitutional method', 'More time for appeals', 'Claimed innocence', 'A medical condition'] }));
+});
+
+test('trimToSentences does not split on decimals or mid-sentence abbreviations', () => {
+  const text = 'Investment grew to $4.1 billion in 2025, up from $1.2 billion. U.S. officials welcomed it. A third sentence follows here.';
+  assert.equal(
+    trimToSentences(text, 15),
+    'Investment grew to $4.1 billion in 2025, up from $1.2 billion. U.S. officials welcomed it.'
+  );
+});

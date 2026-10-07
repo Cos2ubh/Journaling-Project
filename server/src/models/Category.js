@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { matchCategories } = require('../utils/categorize');
 
 const CategorySchema = new mongoose.Schema({
   name: {
@@ -78,20 +79,9 @@ CategorySchema.statics.initializeDefaults = async function() {
 
 // Auto-categorize an article based on keywords
 CategorySchema.statics.categorizeArticle = async function(title, description) {
-  const text = `${title} ${description}`.toLowerCase();
-  const categories = await this.find({ isActive: true });
-  const matched = [];
-
-  for (const category of categories) {
-    for (const keyword of category.keywords) {
-      if (text.includes(keyword.toLowerCase())) {
-        matched.push(category._id);
-        break;
-      }
-    }
-  }
-
-  return matched;
+  const categories = await this.find({ isActive: true }).select('keywords').lean();
+  return matchCategories(`${title} ${description || ''}`, categories);
 };
+
 
 module.exports = mongoose.model('Category', CategorySchema);

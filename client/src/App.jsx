@@ -1,10 +1,14 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import Landing from './components/landing/Landing';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
+import Onboarding from './components/onboarding/Onboarding';
+import Settings from './components/onboarding/Settings';
+import Today from './components/today/Today';
 import Dashboard from './components/dashboard/Dashboard';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { track, sanitizeUrl } from './services/analytics';
@@ -28,27 +32,21 @@ function App() {
       <AuthProvider>
         <PageTracker />
         <Routes>
-          {/* Redirect root to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-
-          {/* Public routes */}
+          {/* Public */}
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-          {/* Protected routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
+          {/* Signed in */}
+          <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+          <Route path="/today" element={<ProtectedRoute requireOnboarded><Today /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute requireOnboarded><Dashboard /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute requireOnboarded><Settings /></ProtectedRoute>} />
 
-          {/* Catch all - redirect to login */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Anything else */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </Router>

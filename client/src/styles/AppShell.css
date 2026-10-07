@@ -1,0 +1,208 @@
+/* ================================================
+   Veritas Daily - app shell: header, modal, buttons
+   Builds on the tokens in index.css
+   ================================================ */
+
+:root {
+  /* Serif for reading surfaces (headlines, summaries). Inter stays the UI face. */
+  --font-reading: 'Newsreader', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --reading-width: 680px;
+}
+
+/* ---------- Buttons ---------- */
+.vd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: 44px;
+  padding: 0 var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font: 600 0.95rem/1 var(--font-body);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  text-decoration: none;
+}
+.vd-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.vd-btn-primary { background: var(--accent-primary); color: #fff; }
+.vd-btn-primary:hover:not(:disabled) { background: #0a7fe6; }
+.vd-btn-secondary { background: transparent; color: var(--text-primary); border-color: var(--border-color); }
+.vd-btn-secondary:hover:not(:disabled) { border-color: var(--border-hover); }
+.vd-btn-quiet { background: transparent; color: var(--text-secondary); }
+.vd-btn-quiet:hover:not(:disabled) { color: var(--text-primary); }
+
+/* Visible keyboard focus everywhere in the new UI */
+.vd-btn:focus-visible,
+.vd-nav-link:focus-visible,
+.vd-brand:focus-visible,
+.vd-avatar:focus-visible,
+.vd-menu-item:focus-visible,
+.vd-pro-link:focus-visible,
+.vd-modal-close:focus-visible {
+  outline: 2px solid var(--accent-light);
+  outline-offset: 2px;
+}
+
+/* ---------- Header ---------- */
+.vd-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+}
+.vd-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 60px;
+  padding: 0 var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+}
+.vd-brand {
+  font-family: var(--font-reading);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.vd-nav { display: flex; gap: var(--space-xs); }
+.vd-nav-link {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+.vd-nav-link:hover { color: var(--text-primary); }
+.vd-nav-link.active { color: var(--text-primary); background: var(--bg-tertiary); }
+
+.vd-header-right { margin-left: auto; display: flex; align-items: center; gap: var(--space-md); }
+.vd-streak { font-size: 0.875rem; color: var(--text-tertiary); white-space: nowrap; }
+.vd-streak.on { color: var(--warning); font-weight: 600; }
+.vd-pro-link {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: var(--radius-full);
+  padding: 4px 14px;
+  font: 600 0.85rem var(--font-body);
+  cursor: pointer;
+}
+.vd-pro-link:hover { border-color: var(--border-hover); }
+
+.vd-menu { position: relative; }
+.vd-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+.vd-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 220px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm);
+  box-shadow: var(--glass-shadow);
+  z-index: var(--z-dropdown);
+}
+.vd-menu-name { padding: var(--space-sm) var(--space-sm) 0; font-weight: 600; }
+.vd-menu-email {
+  padding: 0 var(--space-sm) var(--space-sm);
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--space-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vd-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-sm);
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font: 500 0.95rem var(--font-body);
+  text-decoration: none;
+  cursor: pointer;
+}
+.vd-menu-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
+@media (max-width: 640px) {
+  .vd-header-inner { gap: var(--space-md); padding: 0 var(--space-md); }
+  .vd-brand { font-size: 1.15rem; }
+  .vd-streak { display: none; }
+  .vd-nav-link { padding: var(--space-sm); }
+}
+
+/* ---------- Modal ---------- */
+.vd-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  z-index: var(--z-modal);
+}
+.vd-modal {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  z-index: var(--z-modal-content);
+}
+.vd-modal-close {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+}
+.vd-modal-close:hover { color: var(--text-primary); }
+.vd-modal-reason { color: var(--warning); font-size: 0.9rem; margin-bottom: var(--space-sm); }
+.vd-modal-title { font-family: var(--font-reading); font-size: 1.75rem; font-weight: 600; line-height: 1.2; margin-bottom: var(--space-sm); }
+.vd-modal-text { color: var(--text-secondary); margin-bottom: var(--space-md); }
+.vd-modal-list { list-style: none; margin: 0 0 var(--space-md); }
+.vd-modal-list li { padding: var(--space-sm) 0; border-top: 1px solid var(--border-color); }
+.vd-modal-list li:last-child { border-bottom: 1px solid var(--border-color); }
+.vd-modal-note { color: var(--text-tertiary); font-size: 0.875rem; margin-bottom: var(--space-lg); }
+.vd-modal-error { color: var(--error); font-size: 0.9rem; margin-bottom: var(--space-md); }
+.vd-modal-actions { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+
+/* ---------- Shared page states ---------- */
+.vd-page { max-width: var(--reading-width); margin: 0 auto; padding: var(--space-xl) var(--space-lg) var(--space-3xl); }
+.vd-state { padding: var(--space-2xl) 0; color: var(--text-secondary); }
+.vd-state h2 { font-family: var(--font-reading); font-size: 1.5rem; color: var(--text-primary); margin-bottom: var(--space-sm); }
+.vd-state p { margin-bottom: var(--space-md); }
+
+@media (prefers-reduced-motion: reduce) {
+  .vd-btn, .vd-nav-link, .vd-menu-item { transition: none; }
+}

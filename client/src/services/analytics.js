@@ -73,3 +73,21 @@ export function scoreBand(score) {
   if (score >= 40) return 'mixed';
   return 'low';
 }
+
+/**
+ * Feature flags / experiments. getFeatureFlag returns undefined when analytics is
+ * off or flags haven't loaded; callers fall back to the control experience.
+ * Calling it also records the exposure in PostHog ($feature_flag_called).
+ */
+export function getFeatureFlag(key) {
+  if (!enabled) return undefined;
+  return posthog.getFeatureFlag(key);
+}
+
+/** Subscribe to flag loads; returns an unsubscribe function. */
+export function onFeatureFlags(callback) {
+  if (!enabled) return () => {};
+  const off = posthog.onFeatureFlags(callback);
+  // Older posthog-js versions return nothing; newer ones return an unsubscribe fn.
+  return typeof off === 'function' ? off : () => {};
+}

@@ -38,7 +38,7 @@ const Register = () => {
     const result = await register(formData.name, formData.email, formData.password);
 
     if (result.success) {
-      navigate('/dashboard');
+      navigate('/onboarding');
     } else {
       setError(result.error);
     }
@@ -49,7 +49,7 @@ const Register = () => {
     <div className="auth-container">
       <div className="auth-card">
         <h2>Register</h2>
-        <p className="auth-subtitle">Create your account to access filtered news</p>
+        <p className="auth-subtitle">Create your account to get your daily briefing</p>
 
         {error && <div className="error-message">{error}</div>}
 
