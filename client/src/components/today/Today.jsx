@@ -7,10 +7,12 @@ import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 import AppHeader from '../common/AppHeader';
 import StoryItem from './StoryItem';
 import QuickCheck from './QuickCheck';
+import BriefingRail from './BriefingRail';
 import { formatDayKey } from './format';
 import '../../styles/AppShell.css';
 import '../../styles/Today.css';
 import '../../styles/TodayMotion.css';
+import '../../styles/TodayLayout.css';
 
 const EXPERIMENT = 'briefing-credibility-display';
 
@@ -67,7 +69,7 @@ const BriefingSkeleton = () => (
 );
 
 const Today = () => {
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [briefing, setBriefing] = useState(null);
   const [status, setStatus] = useState('loading'); // loading | ready | error | onboarding
   const [error, setError] = useState('');
@@ -158,19 +160,24 @@ const Today = () => {
                 <p>New stories are checked every few hours. Come back later today, or browse everything in Explore.</p>
               </div>
             ) : (
-              <>
-                <div className="vd-stories">
-                  {briefing.stories.map((story, i) => (
-                    <StoryItem key={story.id} story={story} position={i + 1} variant={variant} />
-                  ))}
+              <div className="vd-today-grid">
+                <div className="vd-today-main">
+                  <div className="vd-stories">
+                    {briefing.stories.map((story, i) => (
+                      <StoryItem key={story.id} story={story} position={i + 1} variant={variant} lead={i === 0} />
+                    ))}
+                  </div>
+                  <div id="quick-check" tabIndex={-1} className="vd-anchor">
+                    <QuickCheck
+                      quiz={briefing.quiz}
+                      streak={briefing.streak}
+                      onQuizUpdate={(quiz) => setBriefing((b) => ({ ...b, quiz }))}
+                      onStreakChange={onStreakChange}
+                    />
+                  </div>
                 </div>
-                <QuickCheck
-                  quiz={briefing.quiz}
-                  streak={briefing.streak}
-                  onQuizUpdate={(quiz) => setBriefing((b) => ({ ...b, quiz }))}
-                  onStreakChange={onStreakChange}
-                />
-              </>
+                <BriefingRail briefing={briefing} topics={user?.preferences?.topics || []} />
+              </div>
             )}
           </>
         )}
