@@ -1,5 +1,21 @@
 # Deployment Guide - Veritas Daily
 
+## Quick checklist (current setup)
+
+The rest of this guide is the detailed walkthrough. This is the short version for the current code.
+
+1. **Database: MongoDB Atlas.** Create a free cluster, a database user, and allow network access from anywhere (Render's IPs change). Copy the connection string.
+2. **API: Render.** New > Blueprint > pick this repo. `render.yaml` creates `veritas-daily-api` (free plan, Singapore region, `server/` folder) and generates `JWT_SECRET` and `JOB_SECRET`. In the dashboard, fill in: `MONGODB_URI`, `NEWSAPI_KEY`, `ANTHROPIC_API_KEY`, `FRONTEND_URL` (your Vercel URL), `API_URL` (this service's URL), and the `SMTP_*` / `FROM_EMAIL` values if you want the morning email.
+3. **Web app: Vercel.** Import the repo with root directory `client`. Set `VITE_API_URL` to `<API_URL>/api` and, optionally, `VITE_POSTHOG_KEY`. `client/vercel.json` makes routes like `/today` work on refresh.
+4. **Scheduled jobs: GitHub Actions.** The free Render plan sleeps, so `.github/workflows/scheduled-jobs.yml` wakes it and triggers jobs. Add repository secrets `API_URL` and `JOB_SECRET` (copy the value Render generated). Run the workflow once by hand (Actions > Scheduled jobs > Run workflow > `fetch-news`) to load the first stories.
+5. **Admin account.** Register in the app, then from `server/` with `MONGODB_URI` pointing at Atlas: `npm run make-admin -- you@example.com`.
+
+Notes:
+- GitHub can delay scheduled workflows by several minutes, and pauses them after 60 days without repository activity.
+- Check NewsAPI's terms for your plan before going public: the free Developer plan may be limited to development use.
+- AI costs: each new story is analysed once and enriched once (Claude Haiku). Set a monthly spend limit in the Claude Console.
+
+
 ## Overview
 This guide will help you deploy your news filtering website online with automatic updates.
 

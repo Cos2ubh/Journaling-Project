@@ -1,0 +1,49 @@
+# Triggers Veritas Daily's background jobs on the deployed API.
+# Needed because free hosting (Render free tier) sleeps, so in-process cron can't run.
+# Repository secrets required: API_URL (e.g. https://veritas-daily-api.onrender.com) and JOB_SECRET.
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'    # fetch-news  (every 3 hours)
+    - cron: '30 */3 * * *'   # fetch-india
+    - cron: '45 */3 * * *'   # enrich      (summaries + questions for new stories)
+    - cron: '30 1 * * *'     # digest      (07:00 India time)
+    - cron: '0 0 * * *'      # cleanup
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run
+        required: true
+        type: choice
+        options: [fetch-news, fetch-india, enrich, digest, cleanup, recategorize]
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Pick the job for this schedule
+        id: pick
+        run: |
+          JOB="${{ github.event.inputs.job }}"
+          if [ -z "$JOB" ]; then
+            case "${{ github.event.schedule }}" in
+              "0 */3 * * *")  JOB=fetch-news ;;
+              "30 */3 * * *") JOB=fetch-india ;;
+              "45 */3 * * *") JOB=enrich ;;
+              "30 1 * * *")   JOB=digest ;;
+              "0 0 * * *")    JOB=cleanup ;;
+            esac
+          fi
+          echo "job=$JOB" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger on the API (retries while a sleeping server wakes up)
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          JOB_SECRET: ${{ secrets.JOB_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 6 --retry-delay 20 --retry-all-errors --max-time 90 \
+            -X POST -H "X-Job-Secret: $JOB_SECRET" \
+            "$API_URL/api/internal/jobs/${{ steps.pick.outputs.job }}"

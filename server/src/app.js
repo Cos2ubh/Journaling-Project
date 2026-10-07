@@ -11,6 +11,7 @@ const viralRoutes = require('./routes/viral');
 const verificationRoutes = require('./routes/verification');
 const meRoutes = require('./routes/me');
 const briefingRoutes = require('./routes/briefing');
+const internalRoutes = require('./routes/internal');
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use('/api/viral', viralRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/briefing', briefingRoutes);
+app.use('/api/internal', internalRoutes);
 
 // 404 handler
 app.use((req, res) => {

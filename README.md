@@ -8,33 +8,34 @@ Credibility-scored news. Veritas Daily collects stories from trusted sources, sc
 
 ## ✨ Features
 
-### 🔍 Multi-Layer Filtering System
-- **Keyword Filter**: Detects clickbait and sensational content
-- **Source Credibility**: Rates news sources based on reliability
-- **AI Analysis**: Claude analyzes quality, bias, and credibility
-- **Manual Curation**: Admin review for flagged articles
+### ☀️ Daily briefing
+- Pick up to 3 topics; each morning you get the **5 most credible stories** in them
+- Every story shows a **credibility meter** (source reliability + language signals + AI review)
+- Claude writes a short, neutral summary of each story (generated once per article, shared by all readers)
+- Max 2 stories per outlet and no duplicate coverage of the same event
 
-### 📡 Viral News Detection
-- Real-time detection of trending stories
-- Fact-checking and claim verification
-- Misinformation alerts
-- Cross-source validation
+### ✅ Quick check and streaks
+- A 3-question check at the end of the briefing, grounded in the day's articles
+- Instant feedback with the reason from the article; answers are verified on the server
+- Daily streak and a 14-day activity strip
 
-### 🛡️ News Verifier
-- **Verify by URL**: Analyze any news article instantly
-- **Verify by Keywords**: Search and compare multiple sources
-- Get credibility scores, bias analysis, and recommendations
+### 🛡️ Story checker
+- Paste any link or claim to see how it scores, with cross-checks against other sources
+- Free plan: 5 checks a day (Pro waitlist when you hit the limit)
 
-### 🎨 Modern UI
-- PS5-inspired dark theme
-- Glassmorphism effects
-- Smooth animations
-- Fully responsive design
+### ✉️ Morning email
+- Optional 7 am email with the same 5 stories and a link back to the quick check
+- One-click unsubscribe
 
-### ⚙️ Automatic Updates
-- News fetching every hour
-- Viral detection every 2 hours
-- Daily database cleanup
+### 🔍 Multi-layer scoring
+- **Keyword filter**: clickbait and sensational language
+- **Source credibility**: reliability ratings for 80+ outlets
+- **AI analysis**: Claude rates quality, bias and credibility (article text is treated as untrusted input)
+
+### 🧪 Built to learn from usage
+- PostHog events for the whole funnel, an A/B test on the credibility meter, and a fake-door test for a paid plan (see **Product analytics**)
+
+Hidden behind flags: viral-story detection and the X/Twitter feed.
 
 ## 🚀 Quick Start
 
@@ -155,14 +156,18 @@ VITE_API_URL=http://localhost:5000/api
 ### Viral News
 ![Viral News](docs/screenshots/viral.png)
 
-## 🔄 Automatic Update Schedule
+## 🔄 Background Jobs
 
-| Task | Frequency | Description |
-|------|-----------|-------------|
-| US/International News | Every hour | Fetches latest news from NewsAPI |
-| Indian News | Every hour | Fetches India-specific news |
-| Viral Detection | Every 2 hours | Detects and verifies trending stories |
-| Database Cleanup | Daily | Removes old articles (keeps 30 days) |
+| Job | Default schedule | What it does |
+|-----|------------------|--------------|
+| `fetch-news` | every 3 hours (UTC) | International news, 7 NewsAPI requests |
+| `fetch-india` | every 3 hours, offset 30 min | Indian news, 2 requests |
+| `enrich` | every 3 hours, offset 45 min | Pre-generate summaries + questions for top new stories |
+| `digest` | 07:00 `APP_TIMEZONE` | Morning email to opted-in users |
+| `cleanup` | daily 00:00 UTC | Remove non-approved articles older than 30 days |
+
+About 72 NewsAPI requests a day, within the free tier. Run any job once with `npm run job -- <name>` (`npm run job -- list` shows all).
+Locally, jobs run in-process. On a host that sleeps, set `ENABLE_CRON=false` and trigger them through the protected `POST /api/internal/jobs/:name` endpoint.
 
 ## 🛠️ API Endpoints
 
@@ -189,6 +194,28 @@ VITE_API_URL=http://localhost:5000/api
 ### Verification
 - `POST /api/verification/url` - Verify article by URL
 - `POST /api/verification/keywords` - Verify by keywords
+
+### Me
+- `GET /api/me` - Profile, preferences, streak, checks left today
+- `PUT /api/me/preferences` - Topics (free: up to 3) and morning email
+- `GET /api/me/activity` - Last 14 days
+- `POST /api/me/pro-interest` - Join the Pro waitlist (fake door; nothing is charged)
+- `GET|POST /api/me/unsubscribe?token=` - Unsubscribe from the morning email
+
+### Briefing
+- `GET /api/briefing/today` - Today's briefing (built on first request)
+- `POST /api/briefing/today/answers` - Answer a quick-check question `{ index, choice }`
+- `POST /api/briefing/today/done` - Finish a day that has no quick check
+
+## 📈 Product analytics
+
+Analytics is optional: set `VITE_POSTHOG_KEY` in `client/.env` to turn it on. Autocapture and session recording are off, and the text or links people check are never sent.
+
+**Funnel events:** `landing_viewed`, `signed_up`, `onboarding_started`, `onboarding_completed`, `briefing_viewed`, `story_opened`, `credibility_revealed`, `quiz_started`, `quiz_answered`, `quiz_completed`, `streak_extended`, `verifier_opened`, `verification_submitted`, `verification_completed`, `verification_failed`, `verification_limit_hit`, `pro_cta_viewed`, `pro_waitlist_joined`, `digest_toggled`, `page_viewed`.
+
+**Experiment:** create a multivariate feature flag `briefing-credibility-display` in PostHog with variants `visible` (control) and `on-tap`, 50/50. Without the flag everyone gets `visible`.
+
+**SQL:** `analytics/hogql-queries.sql` has ready-to-paste queries for the activation funnel, next-day retention, the experiment, Pro demand by entry point, and quick-check difficulty.
 
 ## 🤝 Contributing
 
