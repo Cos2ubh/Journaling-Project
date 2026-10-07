@@ -7,9 +7,11 @@ const express = require('express');
 const router = express.Router();
 const { verifyByURL, verifyByKeywords } = require('../controllers/verificationController');
 const { protect } = require('../middleware/auth');
+const { verificationLimiter } = require('../middleware/rateLimiter');
 
 // All verification routes require authentication
 router.use(protect);
+router.use(verificationLimiter);
 
 /**
  * POST /api/verification/url

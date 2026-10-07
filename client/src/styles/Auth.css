@@ -198,6 +198,45 @@
   color: var(--text-primary);
 }
 
+/* Success Message */
+.success-message {
+  background: rgba(0, 210, 106, 0.1);
+  color: var(--success);
+  padding: 14px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 0.875rem;
+  border-left: 3px solid var(--success);
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Forgot Password Link */
+.forgot-password-link {
+  text-align: right;
+  margin-top: var(--space-sm);
+  margin-bottom: 0;
+}
+
+.forgot-password-link a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: color var(--transition-fast);
+}
+
+.forgot-password-link a:hover {
+  color: var(--accent-light);
+}
+
+/* Reset Info */
+.reset-info {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: var(--space-lg) 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 /* Success state animation */
 @keyframes successPulse {
   0% {

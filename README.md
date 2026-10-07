@@ -174,7 +174,13 @@ VITE_API_URL=http://localhost:5000/api
 ### Articles
 - `GET /api/articles` - Get filtered articles (paginated)
 - `GET /api/articles/:id` - Get single article
-- `POST /api/articles/:id/save` - Save article
+- `GET /api/articles/search` - Search articles
+- `GET /api/articles/trending` - Trending articles
+- `GET /api/articles/categories` - List categories
+- `GET /api/articles/sources` - List sources
+- `GET /api/articles/stats` - Article statistics
+- `GET /api/articles/india` - Indian news feed
+- `GET /api/articles/x/news` - X/Twitter news (also `/x/search`, `/x/trending`)
 
 ### Viral News
 - `GET /api/viral/trending` - Get trending stories

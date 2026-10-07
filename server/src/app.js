@@ -12,6 +12,11 @@ const verificationRoutes = require('./routes/verification');
 
 const app = express();
 
+// Behind Render/Vercel's proxy: needed so rate limiting sees real client IPs
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(helmet()); // Security headers
 app.use(cors({
@@ -20,6 +25,22 @@ app.use(cors({
 }));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
+// In production, never leak internal error messages from 5xx responses.
+// Many controllers include rror: error.message; strip it centrally.
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode >= 500 && body && typeof body === 'object' && 'error' in body) {
+        const { error, ...safeBody } = body;
+        return originalJson(safeBody);
+      }
+      return originalJson(body);
+    };
+    next();
+  });
+}
 
 // Logging middleware
 if (process.env.NODE_ENV === 'development') {

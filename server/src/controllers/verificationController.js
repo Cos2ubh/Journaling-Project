@@ -10,6 +10,7 @@ const { analyzeWithAI } = require('../services/aiAnalyzer');
 const { analyzeForMisinformation, extractClaims, crossReferenceWithSources } = require('../services/factChecker');
 const { getSourceCredibility } = require('../services/credibilityService');
 const logger = require('../utils/logger');
+const { assertSafeUrl, safeRequestOptions } = require('../utils/urlSafety');
 
 /**
  * Domain to Source Name Mapping
@@ -124,11 +125,15 @@ async function findCorroboratingSources(keywords, excludeUrl) {
  */
 async function fetchArticleFromURL(url) {
   try {
+    // Block SSRF: reject internal/private targets before and during the request
+    assertSafeUrl(url);
+
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       },
-      timeout: 15000
+      timeout: 15000,
+      ...safeRequestOptions()
     });
 
     const $ = cheerio.load(response.data);

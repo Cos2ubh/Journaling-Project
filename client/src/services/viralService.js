@@ -36,14 +36,14 @@ export const getViralStats = async () => {
 };
 
 // Analyze text for misinformation
-export const analyzeText = async (text) => {
-  const response = await api.post('/viral/analyze', { text });
+export const analyzeText = async (title, content = '') => {
+  const response = await api.post('/viral/analyze', { title, content });
   return response.data;
 };
 
 // Get fact checker sources
 export const getFactCheckers = async () => {
-  const response = await api.get('/viral/fact-checkers');
+  const response = await api.get('/viral/factcheckers');
   return response.data;
 };
 

@@ -1,5 +1,7 @@
+const crypto = require('crypto');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const sendEmail = require('../utils/sendEmail');
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -76,7 +78,7 @@ const login = async (req, res) => {
       });
     }
 
-    // Find user and include password
+    // Find user and include password hash (excluded by default in the schema)
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
@@ -86,7 +88,7 @@ const login = async (req, res) => {
       });
     }
 
-    // Check password
+    // Verify password
     const isPasswordMatch = await user.comparePassword(password);
 
     if (!isPasswordMatch) {
@@ -173,9 +175,151 @@ const logout = async (req, res) => {
   }
 };
 
+// @desc    Forgot password - send reset email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an email address'
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Return success even if user not found to prevent email enumeration
+      return res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = user.generateResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    // Build reset URL pointing to the frontend
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #0070d1;">Password Reset Request</h2>
+        <p>Hi ${user.name},</p>
+        <p>You requested a password reset. Click the button below to set a new password:</p>
+        <a href="${resetUrl}"
+           style="display: inline-block; padding: 12px 24px; background: #0070d1; color: #fff;
+                  text-decoration: none; border-radius: 6px; margin: 16px 0; font-weight: 600;">
+          Reset Password
+        </a>
+        <p style="color: #888; font-size: 0.9em;">
+          This link expires in 15 minutes. If you didn't request this, ignore this email.
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+        <p style="color: #aaa; font-size: 0.8em;">Real News Filter</p>
+      </div>
+    `;
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset - Real News Filter',
+        html
+      });
+
+      logger.info(`Password reset email sent to: ${email}`);
+    } catch (emailError) {
+      // Clear token if email fails
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      logger.error('Password reset email failed:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Email could not be sent. Please try again later.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent'
+    });
+
+  } catch (error) {
+    logger.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Reset password using token
+// @route   POST /api/auth/reset-password/:token
+// @access  Public
+const resetPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a password with at least 6 characters'
+      });
+    }
+
+    // Hash the token from the URL to match what's stored in DB
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    // Set new password and clear reset fields
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    logger.info(`Password reset successful for: ${user.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+
+  } catch (error) {
+    logger.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getMe,
-  logout
+  logout,
+  forgotPassword,
+  resetPassword
 };

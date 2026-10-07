@@ -1,26 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useVerification } from '../../hooks/useVerification';
+import { toUrl, detectInputType } from '../../utils/detectInput';
+import { track, scoreBand } from '../../services/analytics';
 import '../../styles/NewsVerifier.css';
 
 const NewsVerifier = ({ isOpen, onClose }) => {
   const [input, setInput] = useState('');
   const { loading, error, result, verifyURL, verifyKeywords, clearResult } = useVerification();
 
+  // Funnel step: user opened the verifier
+  useEffect(() => {
+    if (isOpen) track('verifier_opened');
+  }, [isOpen]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!input.trim()) return;
+    const value = input.trim();
+    if (!value) return;
+
+    // Only the input TYPE is tracked, never the URL or text itself.
+    const inputType = detectInputType(value);
+    const startedAt = performance.now();
+    track('verification_submitted', { input_type: inputType });
 
     try {
-      // Smart detection: if it looks like a URL, verify URL, otherwise search by keywords
-      const isURL = input.trim().startsWith('http://') || input.trim().startsWith('https://') || input.trim().includes('.');
+      const data = inputType === 'url'
+        ? await verifyURL(toUrl(value))
+        : await verifyKeywords(value);
 
-      if (isURL) {
-        await verifyURL(input.trim());
+      const durationMs = Math.round(performance.now() - startedAt);
+
+      if (data?.success) {
+        const v = data.verification || {};
+        track('verification_completed', {
+          input_type: inputType,
+          score_band: scoreBand(v.overallScore),
+          overall_score: v.overallScore,
+          sources_found: v.crossVerification?.sourcesFound ?? 0,
+          duration_ms: durationMs
+        });
       } else {
-        await verifyKeywords(input.trim());
+        track('verification_failed', { input_type: inputType, error_type: 'rejected', duration_ms: durationMs });
       }
     } catch (err) {
+      const status = err.response?.status;
+      track('verification_failed', {
+        input_type: inputType,
+        error_type: status ? ('http_' + status) : 'network',
+        duration_ms: Math.round(performance.now() - startedAt)
+      });
       console.error('Verification error:', err);
     }
   };

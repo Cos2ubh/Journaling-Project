@@ -9,17 +9,12 @@ const { analyzeWithAI, isAIAvailable } = require('./aiAnalyzer');
 const Category = require('../models/Category');
 const logger = require('../utils/logger');
 
-// Weights for each filtering layer
-const WEIGHTS = {
-  keyword: 0.20,      // 20% - Keyword-based filtering
-  credibility: 0.30,  // 30% - Source credibility
-  aiQuality: 0.25,    // 25% - AI quality analysis (placeholder for Phase 4)
-  aiCredibility: 0.10,// 10% - AI credibility analysis (placeholder for Phase 4)
-  engagement: 0.15    // 15% - User engagement (placeholder)
-};
-
-// Threshold for automatic approval
-const PASSING_THRESHOLD = 60;
+const {
+  WEIGHTS,
+  PASSING_THRESHOLD,
+  calculateOverallScore,
+  determineCurationStatus
+} = require('./scoring');
 
 /**
  * Process an article through the filtering pipeline
@@ -79,13 +74,7 @@ async function processArticle(article) {
     article.categories = categoryIds;
 
     // Set curation status based on score
-    if (overallScore >= 70) {
-      article.curation.status = 'approved';
-    } else if (overallScore < 40) {
-      article.curation.status = 'rejected';
-    } else {
-      article.curation.status = 'pending';
-    }
+    article.curation.status = determineCurationStatus(overallScore);
 
     logger.info(`Processed article: "${article.title.substring(0, 50)}..." - Score: ${overallScore}`);
 
@@ -94,70 +83,6 @@ async function processArticle(article) {
     logger.error(`Error processing article through pipeline:`, error);
     throw error;
   }
-}
-
-/**
- * Calculate overall score from all layers
- * @param {Object} article - Article with filtering metadata
- * @returns {number} Overall score (0-100)
- */
-function calculateOverallScore(article) {
-  const metadata = article.filteringMetadata;
-
-  // Get scores from each layer (with defaults)
-  const scores = {
-    keyword: metadata.keywordFilter?.score || 50,
-    credibility: metadata.credibility?.overallScore || 50,
-    aiQuality: metadata.aiAnalysis?.qualityScore || 50,
-    aiCredibility: metadata.aiAnalysis?.credibilityScore || 50,
-    engagement: 50 // Default engagement score
-  };
-
-  // Calculate weighted average
-  let totalScore = 0;
-  let totalWeight = 0;
-
-  for (const [layer, weight] of Object.entries(WEIGHTS)) {
-    if (scores[layer] !== undefined && scores[layer] !== null) {
-      totalScore += scores[layer] * weight;
-      totalWeight += weight;
-    }
-  }
-
-  // Normalize if not all weights are used
-  const normalizedScore = totalWeight > 0 ? totalScore / totalWeight * (1 / Math.max(...Object.values(WEIGHTS))) : 50;
-
-  return Math.round(Math.max(0, Math.min(100, totalScore)));
-}
-
-/**
- * Estimate quality score based on available data
- * (Placeholder until AI analysis is implemented)
- */
-function estimateQualityScore(article, keywordResults) {
-  let score = 60; // Start with neutral score
-
-  // Boost for longer content
-  if (article.content && article.content.length > 500) {
-    score += 5;
-  }
-
-  // Penalize for missing description
-  if (!article.description) {
-    score -= 10;
-  }
-
-  // Use keyword analysis results
-  if (keywordResults.qualityIndicators && keywordResults.qualityIndicators.length > 0) {
-    score += keywordResults.qualityIndicators.length * 5;
-  }
-
-  // Penalize for clickbait
-  if (keywordResults.clickbaitScore > 50) {
-    score -= 15;
-  }
-
-  return Math.max(0, Math.min(100, score));
 }
 
 /**
