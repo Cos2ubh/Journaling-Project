@@ -344,3 +344,10 @@
     justify-content: flex-end;
   }
 }
+
+/* Story score shown in the meta row when the card has no image */
+.score-inline {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-right: 2px;
+}

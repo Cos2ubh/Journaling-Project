@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { stripSourceSuffix } from '../../utils/headline';
 import '../../styles/ArticleCard.css';
 
 const ArticleCard = ({ article }) => {
@@ -15,6 +15,9 @@ const ArticleCard = ({ article }) => {
     filteringMetadata
   } = article;
 
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(urlToImage) && !imageFailed;
+  const displayTitle = stripSourceSuffix(title, source?.name);
   const score = filteringMetadata?.overallScore || 0;
   const credibility = filteringMetadata?.credibility?.sourceRating || 0;
   const biasRating = filteringMetadata?.credibility?.biasRating || 'unknown';
@@ -51,10 +54,10 @@ const ArticleCard = ({ article }) => {
 
   return (
     <div className="article-card">
-      {urlToImage && (
+      {showImage && (
         <div className="article-image">
-          <img src={urlToImage} alt={title} loading="lazy" />
-          <div className="score-badge" style={{ backgroundColor: getScoreColor(score) }}>
+          <img src={urlToImage} alt="" loading="lazy" onError={() => setImageFailed(true)} />
+          <div className="score-badge" title="Story credibility score" style={{ backgroundColor: getScoreColor(score) }}>
             {score}
           </div>
         </div>
@@ -62,6 +65,11 @@ const ArticleCard = ({ article }) => {
 
       <div className="article-content">
         <div className="article-meta">
+          {!showImage && (
+            <span className="score-inline" title="Story credibility score" style={{ color: getScoreColor(score) }}>
+              {score}
+            </span>
+          )}
           <span className="source-name">{source?.name}</span>
           <span className="separator">•</span>
           <span className="publish-date">{formatDate(publishedAt)}</span>
@@ -73,7 +81,7 @@ const ArticleCard = ({ article }) => {
 
         <h3 className="article-title">
           <a href={url} target="_blank" rel="noopener noreferrer">
-            {title}
+            {displayTitle}
           </a>
         </h3>
 
@@ -97,8 +105,8 @@ const ArticleCard = ({ article }) => {
           </div>
 
           <div className="credibility-info">
-            <span className="credibility-score" title="Source Credibility">
-              {credibility}/100
+            <span className="credibility-score" title="How reliable this outlet is overall">
+              Source {credibility}/100
             </span>
           </div>
         </div>

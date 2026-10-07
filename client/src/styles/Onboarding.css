@@ -59,7 +59,8 @@
 .vd-topic.on {
   color: var(--text-primary);
   border-color: var(--topic-color);
-  background: color-mix(in srgb, var(--topic-color) 14%, var(--bg-card));
+  background: color-mix(in srgb, var(--topic-color) 28%, var(--bg-card));
+  font-weight: 600;
 }
 .vd-topic.on .vd-topic-dot { opacity: 1; }
 .vd-topic:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }

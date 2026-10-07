@@ -9,6 +9,7 @@ const { selectStories } = require('./briefingSelector');
 const { enrichArticle, fallbackSummary } = require('./enrichment');
 const { applyActivity, visibleStreak } = require('./streak');
 const { dayKey, lastNDayKeys } = require('../utils/dates');
+const { stripSourceSuffix } = require('../utils/headline');
 const logger = require('../utils/logger');
 
 const STORY_COUNT = 5;
@@ -84,7 +85,7 @@ function storyView(article) {
   const meta = article.filteringMetadata || {};
   return {
     id: article._id,
-    title: article.title,
+    title: stripSourceSuffix(article.title, article.source?.name),
     url: article.url,
     image: article.urlToImage || null,
     source: article.source?.name || 'Unknown',

@@ -21,6 +21,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* align with the shared app header's 1200px content column */
+  padding-left: max(var(--space-lg), calc((100vw - 1200px) / 2 + var(--space-lg)));
+  padding-right: max(var(--space-lg), calc((100vw - 1200px) / 2 + var(--space-lg)));
 }
 
 .header-left {

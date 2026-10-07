@@ -332,3 +332,17 @@ test('digest job skips cleanly when SMTP is not configured', async () => {
     if (saved.p !== undefined) process.env.SMTP_PASS = saved.p;
   }
 });
+
+// ---------------- visual review: headline suffixes ----------------
+const { stripSourceSuffix } = require('../src/utils/headline');
+
+test('outlet suffixes are stripped from headlines, real headline text is kept', () => {
+  assert.equal(stripSourceSuffix('Lionel Messi prepares for his final match for Argentina - AP News', 'Associated Press'), 'Lionel Messi prepares for his final match for Argentina');
+  assert.equal(stripSourceSuffix('Pediatricians renew their call for a ban on raw milk - The Washington Post', 'The Washington Post'), 'Pediatricians renew their call for a ban on raw milk');
+  assert.equal(stripSourceSuffix('Markets rally as inflation cools | Reuters', 'Reuters'), 'Markets rally as inflation cools');
+  // Not an outlet: lowercase tail, colon, or too-short head stay as they are
+  assert.equal(stripSourceSuffix('Cyclone nears the coast - live updates', 'NDTV'), 'Cyclone nears the coast - live updates');
+  assert.equal(stripSourceSuffix('Irdai overhaul could hit revenue by 70%: IBAI', 'Business Standard'), 'Irdai overhaul could hit revenue by 70%: IBAI');
+  assert.equal(stripSourceSuffix('Q&A - BBC', 'BBC News'), 'Q&A - BBC');
+  assert.equal(stripSourceSuffix('No suffix in this headline at all', 'Mint'), 'No suffix in this headline at all');
+});

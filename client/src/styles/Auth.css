@@ -305,3 +305,10 @@
     padding: 12px;
   }
 }
+
+/* serif heading (new look) */
+.auth-card h2 {
+  font-family: var(--font-reading, Georgia, serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
