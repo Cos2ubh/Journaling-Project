@@ -1,7 +1,7 @@
 /**
  * Scoring - pure functions, no I/O.
  * Kept separate from filterPipeline so the logic is unit-testable without
- * a database, OpenAI client, or network.
+ * a database, AI client, or network.
  */
 
 // Weights for each filtering layer (must sum to 1.0)

@@ -39,7 +39,7 @@ const publicApiLimiter = build({
   }
 });
 
-// Authenticated verification (fetches external URLs and calls OpenAI).
+// Authenticated verification (fetches external URLs and calls Claude).
 const verificationLimiter = build({
   windowMs: 15 * 60 * 1000,
   limit: 30,

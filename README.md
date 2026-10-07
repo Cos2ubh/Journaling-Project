@@ -4,14 +4,14 @@ Credibility-scored news. Veritas Daily collects stories from trusted sources, sc
 
 ![PS5-Inspired Dark Theme](https://img.shields.io/badge/Theme-PS5%20Inspired-0070D1?style=for-the-badge)
 ![Auto Updates](https://img.shields.io/badge/Updates-Automatic-00D26A?style=for-the-badge)
-![AI Powered](https://img.shields.io/badge/AI-OpenAI%20GPT-412991?style=for-the-badge)
+![AI Powered](https://img.shields.io/badge/AI-Claude-D97757?style=for-the-badge)
 
 ## ✨ Features
 
 ### 🔍 Multi-Layer Filtering System
 - **Keyword Filter**: Detects clickbait and sensational content
 - **Source Credibility**: Rates news sources based on reliability
-- **AI Analysis**: OpenAI GPT analyzes quality, bias, and credibility
+- **AI Analysis**: Claude analyzes quality, bias, and credibility
 - **Manual Curation**: Admin review for flagged articles
 
 ### 📡 Viral News Detection
@@ -42,7 +42,7 @@ Credibility-scored news. Veritas Daily collects stories from trusted sources, sc
 - Node.js 18+ 
 - MongoDB (local or Atlas)
 - NewsAPI key (free tier available)
-- OpenAI API key (for AI analysis)
+- Anthropic API key (optional, for Claude AI analysis)
 
 ### Local Development
 
@@ -86,7 +86,7 @@ Credibility-scored news. Veritas Daily collects stories from trusted sources, sc
 - **MongoDB + Mongoose** - Database
 - **JWT** - Authentication
 - **node-cron** - Scheduled jobs
-- **OpenAI** - AI analysis
+- **Claude (Anthropic API)** - AI analysis
 - **NewsAPI** - News aggregation
 
 ### Optional Services
@@ -135,7 +135,7 @@ PORT=5000
 MONGODB_URI=mongodb://localhost:27017/news-filter
 JWT_SECRET=your_secret_key
 NEWSAPI_KEY=your_newsapi_key
-OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -206,7 +206,7 @@ This project is licensed under the MIT License.
 
 - Design inspired by PlayStation 5 UI
 - News data from NewsAPI.org
-- AI analysis powered by OpenAI
+- AI analysis powered by Claude
 - Fact-checking sources: Alt News, Boom Live, Snopes, PolitiFact
 
 ## 📧 Support

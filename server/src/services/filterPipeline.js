@@ -47,7 +47,7 @@ async function processArticle(article) {
       overallScore: credibilityResults.overallScore
     };
 
-    // Layer 3: AI Analysis (uses heuristics if OpenAI not configured)
+    // Layer 3: AI Analysis (uses heuristics if Claude is unavailable)
     const aiResults = await analyzeWithAI(article);
     article.filteringMetadata.aiAnalysis = {
       qualityScore: aiResults.qualityScore,

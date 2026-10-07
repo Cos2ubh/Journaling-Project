@@ -62,7 +62,7 @@ JWT_EXPIRE=7d
 
 # API Keys
 NEWSAPI_KEY=your_newsapi_key
-OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
 
 # Frontend URL (update after Vercel deployment)
 FRONTEND_URL=https://your-app.vercel.app
@@ -125,7 +125,7 @@ git push -u origin main
    JWT_SECRET=generate_a_long_random_string_here
    JWT_EXPIRE=7d
    NEWSAPI_KEY=your_newsapi_key
-   OPENAI_API_KEY=your_openai_key
+   ANTHROPIC_API_KEY=your_anthropic_key
    FRONTEND_URL=https://your-app.vercel.app
    ```
 
@@ -231,12 +231,12 @@ curl https://news-filter-backend.onrender.com/health
 5. Free tier: 100 requests/day (sufficient for testing)
 6. Paid tier: $449/month (for production scale)
 
-### OpenAI (AI Analysis)
-1. Go to [OpenAI Platform](https://platform.openai.com)
-2. Create account and add payment method
-3. Create API key
-4. Add to Render environment variables: `OPENAI_API_KEY`
-5. Costs: ~$0.01-0.03 per article analyzed
+### Claude (AI Analysis)
+1. Sign in to the Claude Console and add credits
+2. Create an API key
+3. Add to Render environment variables: `ANTHROPIC_API_KEY`
+4. Optional: set `ANTHROPIC_MODEL` to override the default (Claude Haiku 4.5)
+5. Costs: pay-per-use; Haiku is the lowest-cost model. Check current pricing in the Console
 
 ---
 
@@ -271,16 +271,16 @@ Check if cron jobs are running:
 - **Render**: Free (service sleeps after 15 min)
 - **Vercel**: Free (100GB bandwidth/month)
 - **NewsAPI**: Free (100 requests/day)
-- **OpenAI**: Pay-per-use (~$5-10/month for testing)
-- **Total**: ~$5-10/month
+- **Claude API**: Pay-per-use (small for testing)
+- **Total**: Free + Claude API usage
 
 ### Production Tier
 - **MongoDB Atlas**: $9/month (2GB shared cluster)
 - **Render**: $7/month (always-on service)
 - **Vercel**: Free or $20/month (Pro)
 - **NewsAPI**: $449/month (unlimited requests)
-- **OpenAI**: ~$50-100/month (depending on volume)
-- **Total**: ~$515-585/month
+- **Claude API**: Pay-per-use (depends on volume)
+- **Total**: ~$465-485/month + Claude API usage
 
 ---
 
