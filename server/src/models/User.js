@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+
+// bcrypt work factor. Each +1 doubles the cost of every guess for an attacker.
+// Existing hashes keep their own cost and are upgraded on the next successful login.
+const BCRYPT_ROUNDS = 12;
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
@@ -24,7 +28,7 @@ const UserSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Please provide a password'],
-    minlength: 6,
+    minlength: [8, 'Password must be at least 8 characters'],
     select: false // Don't return password by default
   },
   role: {
@@ -87,7 +91,7 @@ UserSchema.pre('save', async function() {
     return;
   }
 
-  const salt = await bcrypt.genSalt(10);
+  const salt = await bcrypt.genSalt(BCRYPT_ROUNDS);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
@@ -128,4 +132,6 @@ UserSchema.methods.toJSON = function() {
   return user;
 };
 
-module.exports = mongoose.model('User', UserSchema);
+const User = mongoose.model('User', UserSchema);
+User.BCRYPT_ROUNDS = BCRYPT_ROUNDS;
+module.exports = User;

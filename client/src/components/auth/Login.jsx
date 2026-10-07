@@ -68,7 +68,6 @@ const Login = () => {
               onChange={handleChange}
               required
               placeholder="Enter your password"
-              minLength={6}
             />
           </div>
 

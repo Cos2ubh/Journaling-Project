@@ -391,3 +391,44 @@ test('waitlist: join, say why, leave, rejoin', async (t) => {
   assert.ok(after.proInterest.firstAt <= after.proInterest.lastAt, 'original join date kept');
   assert.equal(after.plan, 'free');
 });
+
+// ---------------- password policy ----------------
+test('sign-up requires at least 8 characters', async (t) => {
+  if (!dbAvailable) return t.skip('MongoDB not available');
+  const res = await call('POST', '/api/auth/register', { body: { name: 'X', email: 'short@veritas.test', password: 'seven77' } });
+  assert.equal(res.status, 400);
+  assert.match(res.body.message, /at least 8 characters/);
+});
+
+test('existing users with short passwords can still log in, and old hashes are upgraded to the current bcrypt cost', async (t) => {
+  if (!dbAvailable) return t.skip('MongoDB not available');
+  const bcrypt = require('bcryptjs');
+  // A legacy account: 6-character password hashed at the old cost of 10, written directly.
+  const legacyHash = await bcrypt.hash('abc123', 10);
+  await User.collection.insertOne({
+    name: 'Legacy', email: 'legacy@veritas.test', password: legacyHash, role: 'user',
+    createdAt: new Date(), updatedAt: new Date()
+  });
+
+  const login = await call('POST', '/api/auth/login', { body: { email: 'legacy@veritas.test', password: 'abc123' } });
+  assert.equal(login.status, 200, JSON.stringify(login.body));
+
+  const after = await User.findOne({ email: 'legacy@veritas.test' }).select('+password');
+  assert.equal(bcrypt.getRounds(after.password), User.BCRYPT_ROUNDS, 'hash upgraded');
+  assert.equal(await bcrypt.compare('abc123', after.password), true, 'same password still works');
+
+  const again = await call('POST', '/api/auth/login', { body: { email: 'legacy@veritas.test', password: 'abc123' } });
+  assert.equal(again.status, 200, 'login still works after the upgrade');
+  const wrong = await call('POST', '/api/auth/login', { body: { email: 'legacy@veritas.test', password: 'wrong-pass' } });
+  assert.equal(wrong.status, 401);
+});
+
+test('new passwords are hashed at the current bcrypt cost', async (t) => {
+  if (!dbAvailable) return t.skip('MongoDB not available');
+  const bcrypt = require('bcryptjs');
+  await signUp('cost@veritas.test');
+  const u = await User.findOne({ email: 'cost@veritas.test' }).select('+password');
+  assert.equal(bcrypt.getRounds(u.password), User.BCRYPT_ROUNDS);
+  assert.ok(User.BCRYPT_ROUNDS >= 12);
+});
+

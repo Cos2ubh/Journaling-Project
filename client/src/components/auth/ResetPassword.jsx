@@ -69,8 +69,8 @@ const ResetPassword = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                placeholder="Enter new password"
-                minLength={6}
+                placeholder="New password (at least 8 characters)"
+                minLength={8}
               />
             </div>
 
@@ -84,7 +84,7 @@ const ResetPassword = () => {
                 onChange={handleChange}
                 required
                 placeholder="Confirm new password"
-                minLength={6}
+                minLength={8}
               />
             </div>
 

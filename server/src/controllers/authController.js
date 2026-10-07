@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const { publicUser } = require('../utils/publicUser');
+const bcrypt = require('bcryptjs');
 
 // Coerce to a trimmed lowercase string. Rejecting objects here also blocks
 // NoSQL operator injection like { "email": { "$ne": null } }.
@@ -105,6 +106,14 @@ const login = async (req, res) => {
         success: false,
         message: 'Invalid credentials'
       });
+    }
+
+    // Hashes made with an older, weaker bcrypt cost are re-hashed now, while the
+    // plain password is known. Users upgrade transparently on their next login.
+    if (bcrypt.getRounds(user.password) < User.BCRYPT_ROUNDS) {
+      user.password = password; // pre-save hook hashes it at the current cost
+      await user.save({ validateBeforeSave: false }); // legacy passwords may be shorter than today's minimum
+      logger.info(`Upgraded password hash for user ${user._id}`);
     }
 
     // Update last login (use updateOne to avoid triggering pre-save hook)
@@ -271,10 +280,10 @@ const resetPassword = async (req, res) => {
   try {
     const { password } = req.body;
 
-    if (!password || password.length < 6) {
+    if (typeof password !== 'string' || password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a password with at least 6 characters'
+        message: 'Please provide a password with at least 8 characters'
       });
     }
 
