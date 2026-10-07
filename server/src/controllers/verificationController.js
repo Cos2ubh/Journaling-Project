@@ -518,3 +518,6 @@ function generateKeywordRecommendation({ avgScore, articlesCount, highCredibilit
     return `❌ Low credibility: Articles about this topic show concerning patterns. Treat with skepticism.`;
   }
 }
+
+// Reused by the enrichment service (SSRF-safe page fetch + text extraction)
+exports.fetchArticleFromURL = fetchArticleFromURL;

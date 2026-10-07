@@ -1,6 +1,11 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 const logger = require('../utils/logger');
+const { publicUser } = require('../utils/publicUser');
+
+// Coerce to a trimmed lowercase string. Rejecting objects here also blocks
+// NoSQL operator injection like { "email": { "$ne": null } }.
+const normalizeEmail = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
 const sendEmail = require('../utils/sendEmail');
 
 // @desc    Register new user
@@ -8,10 +13,11 @@ const sendEmail = require('../utils/sendEmail');
 // @access  Public
 const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, password } = req.body;
+    const email = normalizeEmail(req.body.email);
 
     // Validate input
-    if (!name || !email || !password) {
+    if (typeof name !== 'string' || !name.trim() || !email || typeof password !== 'string' || !password) {
       return res.status(400).json({
         success: false,
         message: 'Please provide all required fields'
@@ -43,17 +49,19 @@ const register = async (req, res) => {
       success: true,
       message: 'User registered successfully',
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        },
+        user: publicUser(user),
         token
       }
     });
 
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      const first = Object.values(error.errors)[0];
+      return res.status(400).json({ success: false, message: first?.message || 'Please check your details' });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'Email already registered' });
+    }
     logger.error('Register error:', error);
     res.status(500).json({
       success: false,
@@ -68,10 +76,11 @@ const register = async (req, res) => {
 // @access  Public
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = normalizeEmail(req.body.email);
 
     // Validate input
-    if (!email || !password) {
+    if (!email || typeof password !== 'string' || !password) {
       return res.status(400).json({
         success: false,
         message: 'Please provide email and password'
@@ -110,12 +119,7 @@ const login = async (req, res) => {
       success: true,
       message: 'Login successful',
       data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        },
+        user: publicUser(user),
         token
       }
     });
@@ -139,7 +143,7 @@ const getMe = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: user
+      data: publicUser(user)
     });
   } catch (error) {
     logger.error('Get me error:', error);
@@ -180,7 +184,7 @@ const logout = async (req, res) => {
 // @access  Public
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = normalizeEmail(req.body.email);
 
     if (!email) {
       return res.status(400).json({

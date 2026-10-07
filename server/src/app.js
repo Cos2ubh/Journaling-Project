@@ -9,6 +9,8 @@ const authRoutes = require('./routes/auth');
 const articleRoutes = require('./routes/articles');
 const viralRoutes = require('./routes/viral');
 const verificationRoutes = require('./routes/verification');
+const meRoutes = require('./routes/me');
+const briefingRoutes = require('./routes/briefing');
 
 const app = express();
 
@@ -61,6 +63,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/viral', viralRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/me', meRoutes);
+app.use('/api/briefing', briefingRoutes);
 
 // 404 handler
 app.use((req, res) => {

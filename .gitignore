@@ -49,3 +49,6 @@ desktop.ini
 .cache/
 .tmp/
 temp/
+
+# Local diagnostic scripts
+.scratch/

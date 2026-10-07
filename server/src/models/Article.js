@@ -193,6 +193,22 @@ const ArticleSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+
+  // AI enrichment for the daily briefing (generated once, shared by all users)
+  enrichment: {
+    status: { type: String, enum: ['done', 'fallback', 'failed'] },
+    summary: { type: String },
+    question: {
+      text: { type: String },
+      options: { type: [String], default: undefined },
+      correctIndex: { type: Number },
+      explanation: { type: String }
+    },
+    textSource: { type: String, enum: ['page', 'feed'] },
+    model: { type: String },
+    generatedAt: { type: Date },
+    attempts: { type: Number, default: 0 }
   }
 }, {
   timestamps: true

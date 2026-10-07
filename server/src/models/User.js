@@ -16,7 +16,8 @@ const UserSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
     match: [
-      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+      // Pragmatic check: something@something.tld (any TLD length, e.g. .info, .email, .tech)
+      /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
       'Please provide a valid email'
     ]
   },
@@ -43,6 +44,30 @@ const UserSchema = new mongoose.Schema({
   },
   resetPasswordExpire: {
     type: Date
+  },
+
+  // ---- Product ----
+  preferences: {
+    topics: { type: [String], default: [] },          // category slugs
+    digestOptIn: { type: Boolean, default: false }     // daily email briefing
+  },
+  onboardingCompletedAt: { type: Date },
+  plan: { type: String, enum: ['free', 'pro'], default: 'free' },
+  streak: {
+    current: { type: Number, default: 0 },
+    longest: { type: Number, default: 0 },
+    lastActiveDate: { type: String }                   // "YYYY-MM-DD" in APP_TIMEZONE
+  },
+  usage: {
+    date: { type: String },                            // day the counters below belong to
+    verifications: { type: Number, default: 0 }
+  },
+  // Fake-door test: people who asked for Pro before it exists
+  proInterest: {
+    firstAt: { type: Date },
+    lastAt: { type: Date },
+    count: { type: Number, default: 0 },
+    lastSource: { type: String }
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt
@@ -91,6 +116,8 @@ UserSchema.methods.generateResetToken = function() {
 UserSchema.methods.toJSON = function() {
   const user = this.toObject();
   delete user.password;
+  delete user.resetPasswordToken;
+  delete user.resetPasswordExpire;
   return user;
 };
 
