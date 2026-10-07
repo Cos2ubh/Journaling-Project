@@ -357,3 +357,37 @@ test('unsubscribe link turns the morning email off; bad tokens are rejected', as
   assert.equal(oneClick.status, 200);
   assert.equal((await User.findById(user._id)).preferences.digestOptIn, false);
 });
+
+// ---------------- Pro waitlist follow-up ----------------
+test('waitlist: join, say why, leave, rejoin', async (t) => {
+  if (!dbAvailable) return t.skip('MongoDB not available');
+  const { token } = await signUp('waitlist1@veritas.test');
+
+  const early = await call('PUT', '/api/me/pro-interest/reason', { token, body: { reason: 'checks' } });
+  assert.equal(early.status, 409, 'must join before answering');
+
+  const joined = await call('POST', '/api/me/pro-interest', { token, body: { source: 'verify-limit' } });
+  assert.equal(joined.body.data.joinedProWaitlist, true);
+  assert.equal(joined.body.data.proWaitlist.reason, null);
+
+  const bad = await call('PUT', '/api/me/pro-interest/reason', { token, body: { reason: 'free-money' } });
+  assert.equal(bad.status, 400);
+
+  const long = 'x'.repeat(400);
+  const answered = await call('PUT', '/api/me/pro-interest/reason', { token, body: { reason: 'other', note: long } });
+  assert.equal(answered.status, 200);
+  assert.equal(answered.body.data.proWaitlist.reason, 'other');
+  const stored = await User.findOne({ email: 'waitlist1@veritas.test' });
+  assert.equal(stored.proInterest.note.length, 280, 'note is capped');
+
+  const left = await call('DELETE', '/api/me/pro-interest', { token });
+  assert.equal(left.body.data.joinedProWaitlist, false);
+  assert.equal(left.body.data.proWaitlist, null);
+
+  const rejoined = await call('POST', '/api/me/pro-interest', { token, body: { source: 'settings' } });
+  assert.equal(rejoined.body.data.joinedProWaitlist, true);
+  const after = await User.findOne({ email: 'waitlist1@veritas.test' });
+  assert.equal(after.proInterest.leftAt, undefined, 'rejoining clears leftAt');
+  assert.ok(after.proInterest.firstAt <= after.proInterest.lastAt, 'original join date kept');
+  assert.equal(after.plan, 'free');
+});

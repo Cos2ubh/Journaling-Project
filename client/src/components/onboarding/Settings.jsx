@@ -15,6 +15,30 @@ const Settings = () => {
   const [status, setStatus] = useState('idle'); // idle | saving | saved | error
   const [error, setError] = useState('');
   const [proOpen, setProOpen] = useState(false);
+  const [proSource, setProSource] = useState('topic-limit');
+  const [leaveStep, setLeaveStep] = useState('idle'); // idle | confirm | leaving | error
+
+  const openPro = (source) => { setProSource(source); setProOpen(true); };
+
+  const leaveWaitlist = async () => {
+    setLeaveStep('leaving');
+    try {
+      const updated = await meService.leaveProWaitlist();
+      updateUser(updated);
+      track('pro_waitlist_left');
+      setLeaveStep('idle');
+    } catch {
+      setLeaveStep('error');
+    }
+  };
+
+  const REASON_TEXT = {
+    checks: 'checking forwards and links',
+    topics: 'following more topics',
+    updates: 'hearing when stories are corrected',
+    other: 'something else'
+  };
+  const waitlist = user?.proWaitlist;
 
   const save = async (e) => {
     e.preventDefault();
@@ -45,7 +69,7 @@ const Settings = () => {
             <TopicPicker
               selected={topics}
               onChange={(next) => { setTopics(next); setStatus('idle'); }}
-              onLimitReached={() => setProOpen(true)}
+              onLimitReached={() => openPro('topic-limit')}
             />
             <p className="vd-topics-count">{topics.length} of {FREE_TOPIC_LIMIT} selected</p>
           </section>
@@ -66,8 +90,45 @@ const Settings = () => {
             {status === 'saved' && <span className="vd-saved" role="status">Changes saved</span>}
           </div>
         </form>
+
+        <section className="vd-settings-section vd-settings-pro" aria-labelledby="pro-settings-title">
+          <h2 id="pro-settings-title">Pro waitlist</h2>
+          {user?.joinedProWaitlist ? (
+            <>
+              <p className="vd-settings-help">
+                You joined on {new Date(waitlist?.joinedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}.
+                We'll email you once when Pro launches.
+                {waitlist?.reason ? ` You said you'd use it for ${REASON_TEXT[waitlist.reason]}.` : ''}
+              </p>
+              {leaveStep === 'confirm' || leaveStep === 'leaving' ? (
+                <div className="vd-settings-confirm" role="group" aria-label="Confirm leaving the waitlist">
+                  <span>Leave the waitlist? You won't hear when Pro launches.</span>
+                  <button type="button" className="vd-btn vd-btn-secondary" onClick={leaveWaitlist} disabled={leaveStep === 'leaving'}>
+                    {leaveStep === 'leaving' ? 'Leaving…' : 'Leave the waitlist'}
+                  </button>
+                  <button type="button" className="vd-btn vd-btn-quiet" onClick={() => setLeaveStep('idle')}>Stay on it</button>
+                </div>
+              ) : (
+                <div className="vd-settings-inline">
+                  {!waitlist?.reason && (
+                    <button type="button" className="vd-btn vd-btn-secondary" onClick={() => openPro('settings')}>
+                      Tell us what you'd use it for
+                    </button>
+                  )}
+                  <button type="button" className="vd-btn vd-btn-quiet" onClick={() => setLeaveStep('confirm')}>Leave the waitlist</button>
+                </div>
+              )}
+              {leaveStep === 'error' && <p className="vd-form-error" role="alert">Couldn't leave the waitlist. Try again.</p>}
+            </>
+          ) : (
+            <>
+              <p className="vd-settings-help">Pro isn't available yet. Join the waitlist to hear when it launches; nothing is charged.</p>
+              <button type="button" className="vd-btn vd-btn-secondary" onClick={() => openPro('settings')}>See what Pro includes</button>
+            </>
+          )}
+        </section>
       </main>
-      <ProModal isOpen={proOpen} onClose={() => setProOpen(false)} source="topic-limit" />
+      <ProModal isOpen={proOpen} onClose={() => setProOpen(false)} source={proSource} />
     </>
   );
 };

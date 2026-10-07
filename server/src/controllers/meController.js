@@ -3,7 +3,11 @@ const User = require('../models/User');
 const logger = require('../utils/logger');
 const { publicUser, sendError } = require('../utils/publicUser');
 const { getActivity, HttpError } = require('../services/briefingService');
-const { verifyUnsubscribeToken } = require('../services/digest');
+const { verifyUnsubscribeToken, isEmailConfigured } = require('../services/digest');
+const sendEmail = require('../utils/sendEmail');
+const { onProWaitlist } = require('../utils/publicUser');
+
+const PRO_REASONS = new Set(['checks', 'topics', 'updates', 'other']);
 
 const TOPIC_LIMITS = { free: 3, pro: 10 };
 const PRO_SOURCES = new Set(['verify-limit', 'topic-limit', 'nav', 'settings', 'briefing']);
@@ -66,16 +70,75 @@ exports.registerProInterest = async (req, res) => {
   try {
     const source = PRO_SOURCES.has(req.body?.source) ? req.body.source : 'unknown';
     const now = new Date();
+    const wasOnList = onProWaitlist(req.user);
     const user = await User.findByIdAndUpdate(
       req.user._id,
       {
         $set: { 'proInterest.lastAt': now, 'proInterest.lastSource': source },
         $inc: { 'proInterest.count': 1 },
         // $min sets firstAt when missing and keeps the earliest value otherwise
-        $min: { 'proInterest.firstAt': now }
+        $min: { 'proInterest.firstAt': now },
+        $unset: { 'proInterest.leftAt': 1 } // rejoining after leaving
       },
       { new: true }
     );
+    res.json({ success: true, data: publicUser(user) });
+
+    // Confirmation email, only on joining (not repeat clicks) and only if email is set up.
+    if (!wasOnList && isEmailConfigured()) {
+      sendProWaitlistEmail(user).catch((err) => logger.warn(`Waitlist email failed for ${user._id}: ${err.message}`));
+    }
+  } catch (error) {
+    sendError(res, error, logger);
+  }
+};
+
+function sendProWaitlistEmail(user) {
+  const appUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const firstName = String(user.name || '').trim().split(/\s+/)[0] || 'there';
+  return sendEmail({
+    to: user.email,
+    subject: "You're on the Veritas Pro waitlist",
+    text: [
+      `Hi ${firstName},`,
+      '',
+      "You're on the waitlist for Veritas Pro. Pro isn't available yet; we'll email you once when it launches.",
+      'Nothing has been charged and you will not be charged unless you choose to sign up later.',
+      '',
+      `Changed your mind? Leave the waitlist in Settings: ${appUrl}/settings`
+    ].join('\n'),
+    html: `<p>Hi ${firstName.replace(/[<>&"']/g, '')},</p>
+<p>You're on the waitlist for Veritas Pro. Pro isn't available yet; we'll email you once when it launches.</p>
+<p>Nothing has been charged and you will not be charged unless you choose to sign up later.</p>
+<p style="color:#777">Changed your mind? <a href="${appUrl}/settings">Leave the waitlist in Settings</a>.</p>`
+  });
+}
+
+// @desc    Answer "What would you use Pro for most?" (optional follow-up after joining)
+// @route   PUT /api/me/pro-interest/reason   { reason, note? }
+exports.setProReason = async (req, res) => {
+  try {
+    if (!onProWaitlist(req.user)) throw new HttpError(409, 'Join the waitlist first.', 'NOT_ON_WAITLIST');
+    const reason = String(req.body?.reason || '');
+    if (!PRO_REASONS.has(reason)) throw new HttpError(400, 'Pick one of the options.', 'BAD_REASON');
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 280) : '';
+    const update = { 'proInterest.reason': reason, 'proInterest.answeredAt': new Date() };
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      note ? { $set: { ...update, 'proInterest.note': note } } : { $set: update, $unset: { 'proInterest.note': 1 } },
+      { new: true }
+    );
+    res.json({ success: true, data: publicUser(user) });
+  } catch (error) {
+    sendError(res, error, logger);
+  }
+};
+
+// @desc    Leave the Pro waitlist (history is kept for analytics; you won't be emailed)
+// @route   DELETE /api/me/pro-interest
+exports.leaveProWaitlist = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.user._id, { $set: { 'proInterest.leftAt': new Date() } }, { new: true });
     res.json({ success: true, data: publicUser(user) });
   } catch (error) {
     sendError(res, error, logger);

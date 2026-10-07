@@ -8,7 +8,8 @@
     "dev": "nodemon src/server.js",
     "test": "node --test",
     "make-admin": "node scripts/makeAdmin.js",
-    "job": "node scripts/runJob.js"
+    "job": "node scripts/runJob.js",
+    "waitlist": "node scripts/waitlist.js"
   },
   "keywords": [],
   "author": "",

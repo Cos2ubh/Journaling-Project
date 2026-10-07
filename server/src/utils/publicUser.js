@@ -2,6 +2,11 @@ const { visibleStreak } = require('../services/streak');
 const { dayKey } = require('./dates');
 const { checksLeftToday } = require('../middleware/verificationQuota');
 
+/** On the Pro waitlist = joined at some point and hasn't left since. */
+function onProWaitlist(user) {
+  return Boolean(user?.proInterest?.firstAt) && !user.proInterest.leftAt;
+}
+
 /** The user fields the client is allowed to see. One shape everywhere. */
 function publicUser(user) {
   if (!user) return null;
@@ -17,7 +22,10 @@ function publicUser(user) {
       digestOptIn: Boolean(user.preferences?.digestOptIn)
     },
     streak: visibleStreak(user.streak || {}, dayKey()),
-    joinedProWaitlist: Boolean(user.proInterest?.firstAt),
+    joinedProWaitlist: onProWaitlist(user),
+    proWaitlist: onProWaitlist(user)
+      ? { joinedAt: user.proInterest.firstAt, reason: user.proInterest.reason || null }
+      : null,
     checksLeftToday: checksLeftToday(user)   // null = unlimited
   };
 }
@@ -31,4 +39,4 @@ function sendError(res, error, logger) {
   return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
 }
 
-module.exports = { publicUser, sendError };
+module.exports = { publicUser, sendError, onProWaitlist };

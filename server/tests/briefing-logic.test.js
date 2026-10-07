@@ -346,3 +346,44 @@ test('outlet suffixes are stripped from headlines, real headline text is kept', 
   assert.equal(stripSourceSuffix('Q&A - BBC', 'BBC News'), 'Q&A - BBC');
   assert.equal(stripSourceSuffix('No suffix in this headline at all', 'Mint'), 'No suffix in this headline at all');
 });
+
+// ---------------- Pro waitlist report ----------------
+const { waitlistRows, summarize, toCsv, csvCell } = require('../src/utils/waitlistReport');
+
+const wl = [
+  { name: 'A', email: 'a@x.io', proInterest: { firstAt: new Date('2026-10-02'), lastSource: 'verify-limit', reason: 'checks', count: 2 } },
+  { name: 'B', email: 'b@x.io', proInterest: { firstAt: new Date('2026-10-01'), lastSource: 'nav', reason: 'other', note: '=HYPERLINK("http://evil")' } },
+  { name: 'C', email: 'c@x.io', proInterest: { firstAt: new Date('2026-10-03'), lastSource: 'topic-limit', leftAt: new Date('2026-10-04') } },
+  { name: 'D', email: 'd@x.io', proInterest: { firstAt: new Date('2026-10-05'), lastSource: 'nav' } },
+  { name: 'E', email: 'e@x.io' }
+];
+
+test('waitlist includes people who joined and did not leave, oldest first', () => {
+  assert.deepEqual(waitlistRows(wl).map((r) => r.email), ['b@x.io', 'a@x.io', 'd@x.io']);
+});
+
+test('waitlist summary counts sources, reasons and leavers', () => {
+  const s = summarize(wl);
+  assert.equal(s.onList, 3);
+  assert.equal(s.left, 1);
+  assert.equal(s.answered, 2);
+  assert.deepEqual(s.bySource, { 'Header button': 2, 'Hit check limit': 1 });
+  assert.deepEqual(s.byReason, { 'Something else': 1, 'Checking forwards': 1, 'No answer': 1 });
+});
+
+test('CSV cells that would run as spreadsheet formulas are neutralised', () => {
+  assert.equal(csvCell('=1+1'), "'=1+1");
+  assert.equal(csvCell('+44 20'), "'+44 20");
+  assert.equal(csvCell('-cmd'), "'-cmd");
+  assert.equal(csvCell('@SUM(A1)'), "'@SUM(A1)");
+  assert.equal(csvCell('plain'), 'plain');
+  assert.equal(csvCell('has, comma'), '"has, comma"');
+  assert.equal(csvCell('say "hi"'), '"say ""hi"""');
+});
+
+test('CSV export has a header and one row per person on the list', () => {
+  const csv = toCsv(waitlistRows(wl)).trim().split('\n');
+  assert.equal(csv[0], 'email,name,joined_at,came_from,wants_pro_for,note,pro_clicks');
+  assert.equal(csv.length, 4);
+  assert.ok(csv[1].includes("'=HYPERLINK"), 'formula in note is escaped');
+});

@@ -70,7 +70,11 @@ const UserSchema = new mongoose.Schema({
     firstAt: { type: Date },
     lastAt: { type: Date },
     count: { type: Number, default: 0 },
-    lastSource: { type: String }
+    lastSource: { type: String },
+    reason: { type: String, enum: ['checks', 'topics', 'updates', 'other'] }, // "What would you use Pro for most?"
+    note: { type: String, maxlength: 280 },
+    answeredAt: { type: Date },
+    leftAt: { type: Date }                             // set when someone leaves the waitlist
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt

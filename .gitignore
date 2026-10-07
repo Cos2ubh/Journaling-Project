@@ -52,3 +52,6 @@ temp/
 
 # Local diagnostic scripts
 .scratch/
+
+# Waitlist exports contain email addresses
+*.csv
