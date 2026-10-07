@@ -8,10 +8,12 @@ const router = express.Router();
 const { verifyByURL, verifyByKeywords } = require('../controllers/verificationController');
 const { protect } = require('../middleware/auth');
 const { verificationLimiter } = require('../middleware/rateLimiter');
+const { verificationQuota } = require('../middleware/verificationQuota');
 
 // All verification routes require authentication
 router.use(protect);
 router.use(verificationLimiter);
+router.use(verificationQuota); // free plan: N checks/day
 
 /**
  * POST /api/verification/url

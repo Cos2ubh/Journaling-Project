@@ -1,5 +1,6 @@
 const { visibleStreak } = require('../services/streak');
 const { dayKey } = require('./dates');
+const { checksLeftToday } = require('../middleware/verificationQuota');
 
 /** The user fields the client is allowed to see. One shape everywhere. */
 function publicUser(user) {
@@ -16,7 +17,8 @@ function publicUser(user) {
       digestOptIn: Boolean(user.preferences?.digestOptIn)
     },
     streak: visibleStreak(user.streak || {}, dayKey()),
-    joinedProWaitlist: Boolean(user.proInterest?.firstAt)
+    joinedProWaitlist: Boolean(user.proInterest?.firstAt),
+    checksLeftToday: checksLeftToday(user)   // null = unlimited
   };
 }
 

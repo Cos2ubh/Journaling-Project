@@ -22,6 +22,8 @@ const SCHEDULES = {
   'fetch-news': { cron: process.env.FETCH_SCHEDULE || '0 */3 * * *', timezone: 'UTC' },
   'fetch-india': { cron: process.env.FETCH_INDIA_SCHEDULE || '30 */3 * * *', timezone: 'UTC' },
   enrich: { cron: process.env.ENRICH_SCHEDULE || '45 */3 * * *', timezone: 'UTC' },
+  // 07:00 in APP_TIMEZONE (default India)
+  digest: { cron: process.env.DIGEST_SCHEDULE || '0 7 * * *', timezone: process.env.APP_TIMEZONE || 'Asia/Kolkata' },
   cleanup: { cron: '0 0 * * *', timezone: 'UTC' },
   viral: { cron: '15 */2 * * *', timezone: 'UTC', enabled: () => process.env.ENABLE_VIRAL_DETECTION === 'true' }
 };

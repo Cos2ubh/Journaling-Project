@@ -67,6 +67,12 @@ const TASKS = {
     return counts;
   },
 
+  /** Send the morning email to opted-in users (skips when SMTP isn't configured). */
+  digest: async (options) => {
+    const { sendDailyDigests } = require('../services/digest');
+    return sendDailyDigests(options);
+  },
+
   /** Re-run topic tagging on recent articles (no API cost). */
   recategorize: async ({ days = 7 } = {}) => {
     const Category = require('../models/Category');

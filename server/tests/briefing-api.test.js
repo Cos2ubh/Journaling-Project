@@ -279,3 +279,81 @@ test('operator objects in auth fields are rejected (NoSQL injection)', async (t)
   const r3 = await call('POST', '/api/auth/register', { body: { name: 'X', email: { $gt: '' }, password: 'test-password-123' } });
   assert.equal(r3.status, 400);
 });
+
+// ---------------- Phase 3: daily check limit + unsubscribe ----------------
+
+const { verificationQuota } = require('../src/middleware/verificationQuota');
+const { unsubscribeToken } = require('../src/services/digest');
+
+function fakeRes() {
+  return {
+    statusCode: 200, headers: {}, listeners: {}, body: null,
+    set(k, v) { this.headers[k] = v; },
+    on(ev, fn) { this.listeners[ev] = fn; },
+    status(c) { this.statusCode = c; return this; },
+    json(b) { this.body = b; return this; }
+  };
+}
+
+async function runQuota(user, finalStatus = 200) {
+  const res = fakeRes();
+  let passed = false;
+  await verificationQuota({ user }, res, () => { passed = true; });
+  if (passed) { res.statusCode = finalStatus; res.listeners.finish?.(); }
+  return { passed, res };
+}
+
+test('free plan gets exactly 5 checks a day, even under concurrent requests', async (t) => {
+  if (!dbAvailable) return t.skip('MongoDB not available');
+  await signUp('quota1@veritas.test');
+  const user = await User.findOne({ email: 'quota1@veritas.test' });
+
+  const results = await Promise.all(Array.from({ length: 8 }, () => runQuota(user)));
+  assert.equal(results.filter((r) => r.passed).length, 5);
+  const blocked = results.find((r) => !r.passed);
+  assert.equal(blocked.res.statusCode, 429);
+  assert.equal(blocked.res.body.code, 'DAILY_LIMIT');
+
+  const me = await call('GET', '/api/me', { token: (await call('POST', '/api/auth/login', { body: { email: 'quota1@veritas.test', password: 'test-password-123' } })).body.data.token });
+  assert.equal(me.body.data.checksLeftToday, 0);
+});
+
+test('a failed check is refunded, and Pro users are unlimited', async (t) => {
+  if (!dbAvailable) return t.skip('MongoDB not available');
+  await signUp('quota2@veritas.test');
+  let user = await User.findOne({ email: 'quota2@veritas.test' });
+
+  await runQuota(user, 500); // failed verification
+  await new Promise((r) => setTimeout(r, 100));
+  user = await User.findById(user._id);
+  assert.equal(user.usage.verifications, 0, 'failed check refunded');
+
+  await User.updateOne({ _id: user._id }, { $set: { plan: 'pro' } });
+  user = await User.findById(user._id);
+  const results = await Promise.all(Array.from({ length: 7 }, () => runQuota(user)));
+  assert.ok(results.every((r) => r.passed), 'pro is unlimited');
+});
+
+test('unsubscribe link turns the morning email off; bad tokens are rejected', async (t) => {
+  if (!dbAvailable) return t.skip('MongoDB not available');
+  const { token } = await signUp('unsub@veritas.test');
+  await call('PUT', '/api/me/preferences', { token, body: { topics: ['science'], digestOptIn: true } });
+  const user = await User.findOne({ email: 'unsub@veritas.test' });
+
+  const bad = await fetch(base + '/api/me/unsubscribe?token=nope');
+  assert.equal(bad.status, 400);
+  const withLoginToken = await fetch(base + '/api/me/unsubscribe?token=' + token);
+  assert.equal(withLoginToken.status, 400, 'login token must not work');
+  assert.equal((await User.findById(user._id)).preferences.digestOptIn, true);
+
+  const ok = await fetch(base + '/api/me/unsubscribe?token=' + unsubscribeToken(user._id));
+  assert.equal(ok.status, 200);
+  assert.match(await ok.text(), /unsubscribed/i);
+  assert.equal((await User.findById(user._id)).preferences.digestOptIn, false);
+
+  // One-click (RFC 8058) POST also works
+  await User.updateOne({ _id: user._id }, { $set: { 'preferences.digestOptIn': true } });
+  const oneClick = await fetch(base + '/api/me/unsubscribe?token=' + unsubscribeToken(user._id), { method: 'POST' });
+  assert.equal(oneClick.status, 200);
+  assert.equal((await User.findById(user._id)).preferences.digestOptIn, false);
+});

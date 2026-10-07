@@ -62,6 +62,9 @@ const UserSchema = new mongoose.Schema({
     date: { type: String },                            // day the counters below belong to
     verifications: { type: Number, default: 0 }
   },
+  digest: {
+    lastSentDate: { type: String }                     // day the morning email was last sent
+  },
   // Fake-door test: people who asked for Pro before it exists
   proInterest: {
     firstAt: { type: Date },

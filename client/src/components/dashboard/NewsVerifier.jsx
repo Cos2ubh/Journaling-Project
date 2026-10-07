@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useVerification } from '../../hooks/useVerification';
 import { toUrl, detectInputType } from '../../utils/detectInput';
 import { track, scoreBand } from '../../services/analytics';
+import { useAuth } from '../../contexts/AuthContext';
+import ProModal from '../common/ProModal';
 import '../../styles/NewsVerifier.css';
 
 const NewsVerifier = ({ isOpen, onClose }) => {
   const [input, setInput] = useState('');
   const { loading, error, result, verifyURL, verifyKeywords, clearResult } = useVerification();
+  const { user, refreshUser } = useAuth();
+  const [proOpen, setProOpen] = useState(false);
 
   // Funnel step: user opened the verifier
   useEffect(() => {
@@ -43,8 +47,13 @@ const NewsVerifier = ({ isOpen, onClose }) => {
       } else {
         track('verification_failed', { input_type: inputType, error_type: 'rejected', duration_ms: durationMs });
       }
+      refreshUser(); // update checks left today
     } catch (err) {
       const status = err.response?.status;
+      if (err.response?.data?.code === 'DAILY_LIMIT') {
+        track('verification_limit_hit', { input_type: inputType });
+        setProOpen(true);
+      }
       track('verification_failed', {
         input_type: inputType,
         error_type: status ? ('http_' + status) : 'network',
@@ -78,7 +87,10 @@ const NewsVerifier = ({ isOpen, onClose }) => {
           <div className="verifier-icon-compact">🛡️</div>
           <div className="verifier-title-compact">
             <h3>News Verifier</h3>
-            <p>Check article credibility</p>
+            <p>
+              Check article credibility
+              {user?.checksLeftToday != null && `. ${user.checksLeftToday} free check${user.checksLeftToday === 1 ? '' : 's'} left today.`}
+            </p>
           </div>
           <button className="close-btn" onClick={handleClose} title="Close verifier">
             ✕
@@ -153,6 +165,7 @@ const NewsVerifier = ({ isOpen, onClose }) => {
         </div>
       )}
       </div>
+      <ProModal isOpen={proOpen} onClose={() => setProOpen(false)} source="verify-limit" />
     </>
   );
 };

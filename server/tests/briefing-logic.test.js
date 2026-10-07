@@ -280,3 +280,55 @@ test('trimToSentences does not split on decimals or mid-sentence abbreviations',
     'Investment grew to $4.1 billion in 2025, up from $1.2 billion. U.S. officials welcomed it.'
   );
 });
+
+// ---------------- Phase 3: digest email ----------------
+
+const { renderDigestEmail, unsubscribeToken, verifyUnsubscribeToken, sendDailyDigests } = require('../src/services/digest');
+
+test('digest email escapes third-party content and neutralises unsafe links', () => {
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+  const briefing = {
+    stories: [
+      { source: 'Evil <Source>', title: '<script>alert(1)</script> Headline', summary: 'A & B "quoted"', url: 'javascript:alert(1)', score: 81.6 },
+      { source: 'Good', title: 'Normal story', summary: 'Fine.', url: 'https://example.com/a', score: null }
+    ],
+    quiz: { total: 3 }
+  };
+  const email = renderDigestEmail(briefing, { name: 'Asha Rao' }, { appUrl: 'https://app.example', unsubscribeUrl: 'https://api.example/u?token=t' });
+  assert.ok(!email.html.includes('<script>'), 'title must be escaped');
+  assert.ok(email.html.includes('&lt;script&gt;'));
+  assert.ok(!email.html.includes('javascript:'), 'unsafe link must be removed');
+  assert.ok(email.html.includes('href="https://example.com/a"'));
+  assert.ok(email.html.includes('Good morning, Asha'));
+  assert.ok(email.html.includes('Credibility 82/100'));
+  assert.ok(email.html.includes('https://app.example/today'));
+  assert.ok(email.html.includes('Unsubscribe'));
+  assert.ok(email.text.includes('Unsubscribe: https://api.example/u?token=t'));
+  assert.ok(email.subject.startsWith('Today: '));
+});
+
+test('unsubscribe tokens only work for their purpose', () => {
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+  const jwt = require('jsonwebtoken');
+  assert.equal(verifyUnsubscribeToken(unsubscribeToken('user123')), 'user123');
+  assert.equal(verifyUnsubscribeToken('garbage'), null);
+  assert.equal(verifyUnsubscribeToken(undefined), null);
+  const loginToken = jwt.sign({ id: 'user123', sub: 'user123' }, process.env.JWT_SECRET);
+  assert.equal(verifyUnsubscribeToken(loginToken), null, 'a login token must not unsubscribe');
+  const forged = jwt.sign({ sub: 'user123', purpose: 'unsubscribe' }, 'wrong-secret');
+  assert.equal(verifyUnsubscribeToken(forged), null);
+});
+
+test('digest job skips cleanly when SMTP is not configured', async () => {
+  const saved = { h: process.env.SMTP_HOST, u: process.env.SMTP_USER, p: process.env.SMTP_PASS };
+  delete process.env.SMTP_HOST; delete process.env.SMTP_USER; delete process.env.SMTP_PASS;
+  try {
+    const result = await sendDailyDigests();
+    assert.equal(result.skipped, 'smtp-not-configured');
+    assert.equal(result.sent, 0);
+  } finally {
+    if (saved.h !== undefined) process.env.SMTP_HOST = saved.h;
+    if (saved.u !== undefined) process.env.SMTP_USER = saved.u;
+    if (saved.p !== undefined) process.env.SMTP_PASS = saved.p;
+  }
+});

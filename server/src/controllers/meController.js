@@ -3,6 +3,7 @@ const User = require('../models/User');
 const logger = require('../utils/logger');
 const { publicUser, sendError } = require('../utils/publicUser');
 const { getActivity, HttpError } = require('../services/briefingService');
+const { verifyUnsubscribeToken } = require('../services/digest');
 
 const TOPIC_LIMITS = { free: 3, pro: 10 };
 const PRO_SOURCES = new Set(['verify-limit', 'topic-limit', 'nav', 'settings', 'briefing']);
@@ -88,5 +89,29 @@ exports.getActivity = async (req, res) => {
     res.json({ success: true, data: await getActivity(req.user, 14) });
   } catch (error) {
     sendError(res, error, logger);
+  }
+};
+
+// @desc    Unsubscribe from the morning email via the signed link in the email.
+//          GET = link click (shows a page); POST = one-click from mail apps (RFC 8058).
+// @route   GET|POST /api/me/unsubscribe?token=...   (public: authorised by the token)
+exports.unsubscribe = async (req, res) => {
+  const userId = verifyUnsubscribeToken(req.query.token);
+  const appUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const page = (title, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title></head>
+<body style="font-family:Georgia,serif;max-width:520px;margin:15vh auto;padding:0 24px;color:#111;line-height:1.5">
+<h1 style="font-weight:500">${title}</h1><p>${body}</p></body></html>`;
+
+  if (!userId) {
+    return res.status(400).type('html').send(page('This link has expired', `Turn off the morning email in <a href="${appUrl}/settings">Settings</a> instead.`));
+  }
+  try {
+    await User.updateOne({ _id: userId }, { $set: { 'preferences.digestOptIn': false } });
+    logger.info(`User ${userId} unsubscribed from the digest`);
+    if (req.method === 'POST') return res.status(200).json({ success: true });
+    return res.type('html').send(page("You're unsubscribed", `You won't get the morning email any more. Your briefing is still in the app, and you can turn the email back on in <a href="${appUrl}/settings">Settings</a>.`));
+  } catch (error) {
+    logger.error(error);
+    return res.status(500).type('html').send(page('Something went wrong', 'Try the link again in a minute.'));
   }
 };
